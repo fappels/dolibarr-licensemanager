@@ -221,24 +221,11 @@ class InterfaceLicenseManagerSynchro
         elseif ($action == 'ORDER_CLONE')
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
-        }*/
+        }
         elseif ($action == 'ORDER_VALIDATE')
         {
-        	global $langs;
-        	
-        	dol_include_once('/licensemanager/class/licenseorder.class.php');
-        	dol_include_once('/licensemanager/class/pdf_license.class.php');
-        	
-        	$licenseOrderList = new Licenseorder($this->db);
-        	if ($licenseOrderList->fetchList("fk_commande = $object->id",'') > 0) {
-        	    $pdfLicense = new pdf_license($this->db);
-        	    if ($pdfLicense->write_file($object, $langs) > 0) {
-        	        dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
-        	    } else {
-        	        dol_syslog("Trigger '".$this->name."' for action '$action' has error ".__FILE__.":".$pdfLicense->error);
-        	    }
-        	}
-        }
+        	dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
+        }*/
         elseif ($action == 'ORDER_DELETE')
         {
         // delete licenseorder and licenseorderdet

@@ -54,3 +54,5 @@ Cancel = Annuler
 DeleteLicense = Supprimer licence
 MultiLicense = Licence multiple
 ConfirmDeleteLicense = Confirmez la suppression du licence
+GenerateLicense = Générer Licence
+GenerateLicenseDoc = Générer Document

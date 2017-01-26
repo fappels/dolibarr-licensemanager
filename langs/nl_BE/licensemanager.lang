@@ -54,3 +54,5 @@ Cancel = Annuleren
 DeleteLicense = Verwijder licentie
 MultiLicense = Meervoudige licentie
 ConfirmDeleteLicense = Bevestig licentie verwijdering
+GenerateLicense = Genereer Licentie
+GenerateLicenseDoc = Genereer Document

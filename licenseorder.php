@@ -51,6 +51,7 @@ dol_include_once('/licensemanager/class/licenseorderdet.class.php');
 dol_include_once('/licensemanager/class/licenseproduct.class.php');
 dol_include_once('/licensemanager/class/licensekeylist.class.php');
 dol_include_once('/licensemanager/class/licenselist.class.php');
+dol_include_once('/licensemanager/class/pdf_license.class.php');
 
 
 // Load traductions files requiredby by page
@@ -63,6 +64,7 @@ $error=0;
 $id			= GETPOST('id','int');
 $ref		= GETPOST('ref','alpha');
 $action		= GETPOST('action','alpha');
+$actionDet  = array();
 $myparam	= GETPOST('myparam','alpha');
 
 // Protection if external user
@@ -81,7 +83,7 @@ if ($user->societe_id > 0)
 
 if(strstr($action,'set'))
 {
-	$actionDet = split("_", $action);// element 2 is field, element 3 is licenseorder id
+	$actionDet = explode("_", $action);// element 2 is field, element 3 is licenseorder id
 	$licenseOrder=new Licenseorder($db);
 	if ($licenseOrder->fetch($actionDet[2],0,0) > 0)
 	{
@@ -113,13 +115,6 @@ if(strstr($action,'set'))
 else if ($action == 'generate_licenses')
 {
 	// generate licenses
-	require_once(DOL_DOCUMENT_ROOT."/commande/class/commande.class.php");
-	dol_include_once('/licensemanager/class/licensekeylist.class.php');
-	dol_include_once('/licensemanager/class/licenselist.class.php');
-	dol_include_once('/licensemanager/class/licenseproduct.class.php');
-	dol_include_once('/licensemanager/class/licenseorder.class.php');
-	dol_include_once('/licensemanager/class/licenseorderdet.class.php');
-	
 	$order = new Commande($db);
 	if ($order->fetch($id) > 0)
 	{
@@ -159,7 +154,22 @@ else if ($action == 'generate_licenses')
 			}
 		}
 	}
-}
+} else if ($action == 'generate_doc') {
+	// generate document
+	$order = new Commande($db);
+	if ($order->fetch($id) > 0)
+	{
+		$licenseOrderList = new Licenseorder($db);
+		if ($licenseOrderList->fetchList("fk_commande = $order->id",'') > 0) {
+			$pdfLicense = new pdf_license($db);
+			if ($pdfLicense->write_file($order, $langs) > 0) {
+				$mesg = '<font class="ok">'.$langs->trans("Generated").'</font>';
+			} else {
+				$mesg = '<font class="error">'.$langs->trans("Error").' '.$action.'</font>';
+			}
+		}
+	}
+} 
 
 /***************************************************
 * VIEW
@@ -392,11 +402,14 @@ if ($id > 0 || ! empty($ref))
 				}
 				print '</table><br>';
 			}
-			print '<form name="generate_licenses" action="'.$_SERVER["PHP_SELF"].'?id='.$commande->id.'" method="post">';
-			print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
-			print '<input type="hidden" name="action" value="generate_licenses">';
-			print '<center><input type="submit" name="generate" class="button" value="'.$langs->trans("Generate").'"></center>';
-			print '</form>';
+			print '<div class="tabsAction">';
+				print '<div class="inline-block divButAction"><a class="butAction" href="' . $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_licenses">' . $langs->trans('GenerateLicense') . '</a></div>';
+				if ($commande->statut == 0) {
+					print '<div class="inline-block divButAction"><a class="butActionRefused" href="' . $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_doc">' . $langs->trans('GenerateLicenseDoc') . '</a></div>';
+				} else {
+					print '<div class="inline-block divButAction"><a class="butAction" href="' . $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_doc">' . $langs->trans('GenerateLicenseDoc') . '</a></div>';
+				}
+			print '</div>';
 		}
 	}
 	else
