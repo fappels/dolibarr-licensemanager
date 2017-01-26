@@ -28,6 +28,7 @@
 require_once DOL_DOCUMENT_ROOT.'/core/class/commondocgenerator.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/company.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/pdf.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/functions2.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
 
 dol_include_once('/licensemanager/class/licenseorder.class.php');
@@ -114,144 +115,134 @@ class pdf_license extends CommonDocGenerator
 		$outputlangs->load("licensemanager@licensemanager");
 		$outputlangs->load("companies");
 		$outputlangs->load("products");
+
+		$objectref = dol_sanitizeFileName($order->ref);
+		$dir = $conf->commande->dir_output.'/'.$objectref;
 		
-		if (dol_mkdir(DOL_DATA_ROOT.'/licensemanager') == 0)
+		if (dol_mkdir($dir) >= 0)
 		{
 			$order->fetch_thirdparty();
             
-			$objectref = dol_sanitizeFileName($order->ref);
-			$dir = DOL_DATA_ROOT.'/licensemanager';
-			$file = $dir . "/" . $objectref . ".pdf";
+			$langs->transnoentities("key") ? $fileIndication = "_" . $langs->transnoentities("key") :  $fileIndication = "_Key";
+			
+			$file = $dir . "/" . $objectref . $fileIndication . ".pdf";
             
-			if (! file_exists($dir))
+			$pdf=pdf_getInstance($this->_format);
+
+			if (class_exists('TCPDF'))
 			{
-				if (dol_mkdir($dir) < 0)
-				{
-					$this->error=$langs->transnoentities("ErrorCanNotCreateDir",$dir);
-					return 0;
-				}
+				$pdf->setPrintHeader(false);
+				$pdf->setPrintFooter(false);
 			}
-            
-			if (file_exists($dir))
+			$pdf->SetFont(pdf_getPDFFont($outputlangs));
+			// Set path to the background PDF File
+			if (empty($conf->global->MAIN_DISABLE_FPDI) && ! empty($conf->global->MAIN_ADD_PDF_BACKGROUND))
 			{
-                
-                $pdf=pdf_getInstance($this->_format);
+				$pagecount = $pdf->setSourceFile($conf->mycompany->dir_output.'/'.$conf->global->MAIN_ADD_PDF_BACKGROUND);
+				$tplidx = $pdf->importPage(1);
+			}
 
-                if (class_exists('TCPDF'))
-                {
-                    $pdf->setPrintHeader(false);
-                    $pdf->setPrintFooter(false);
-                }
-                $pdf->SetFont(pdf_getPDFFont($outputlangs));
-                // Set path to the background PDF File
-                if (empty($conf->global->MAIN_DISABLE_FPDI) && ! empty($conf->global->MAIN_ADD_PDF_BACKGROUND))
-                {
-                    $pagecount = $pdf->setSourceFile($conf->mycompany->dir_output.'/'.$conf->global->MAIN_ADD_PDF_BACKGROUND);
-                    $tplidx = $pdf->importPage(1);
-                }
-    
-				$pdf->Open();
-				
-				$pagenb=0;
-				$pdf->SetDrawColor(128,128,128);
+			$pdf->Open();
+			
+			$pagenb=0;
+			$pdf->SetDrawColor(128,128,128);
 
-				$pdf->SetTitle($outputlangs->convToOutputCharset($order->ref));
-				$pdf->SetSubject($outputlangs->transnoentities("LicenseOrder"));
-				$pdf->SetCreator("Dolibarr ".DOL_VERSION);
-				$pdf->SetAuthor($outputlangs->convToOutputCharset($user->getFullName($outputlangs)));
-				$pdf->SetKeyWords($outputlangs->convToOutputCharset($order->ref)." ".$outputlangs->transnoentities("LicenseOrder"));
-				if ($conf->global->MAIN_DISABLE_PDF_COMPRESSION) $pdf->SetCompression(false);
+			$pdf->SetTitle($outputlangs->convToOutputCharset($order->ref));
+			$pdf->SetSubject($outputlangs->transnoentities("LicenseOrder"));
+			$pdf->SetCreator("Dolibarr ".DOL_VERSION);
+			$pdf->SetAuthor($outputlangs->convToOutputCharset($user->getFullName($outputlangs)));
+			$pdf->SetKeyWords($outputlangs->convToOutputCharset($order->ref)." ".$outputlangs->transnoentities("LicenseOrder"));
+			if ($conf->global->MAIN_DISABLE_PDF_COMPRESSION) $pdf->SetCompression(false);
 
-				$pdf->SetMargins($this->_left_margin, $this->_top_margin, $this->_right_margin);   // Left, Top, Right
-				$pdf->SetAutoPageBreak(1,0);
+			$pdf->SetMargins($this->_left_margin, $this->_top_margin, $this->_right_margin);   // Left, Top, Right
+			$pdf->SetAutoPageBreak(1,0);
 
-				// New page
-				$pdf->AddPage();
-				$pagenb++;
-				$this->_pagehead($pdf, $order, 1, $outputlangs);
-				$pdf->SetFont('','', $default_font_size - 1);
-				$pdf->MultiCell(0, 3, '');		// Set interline to 3
-				$pdf->SetTextColor(0,0,0);
+			// New page
+			$pdf->AddPage();
+			$pagenb++;
+			$this->_pagehead($pdf, $order, 1, $outputlangs);
+			$pdf->SetFont('','', $default_font_size - 1);
+			$pdf->MultiCell(0, 3, '');		// Set interline to 3
+			$pdf->SetTextColor(0,0,0);
 
-				$tab_top = 100;
-				$tab_top_newpage = 50;
-				$tab_height = 140;
-				$tab_height_newpage = 190;
+			$tab_top = 100;
+			$tab_top_newpage = 50;
+			$tab_height = 140;
+			$tab_height_newpage = 190;
 
-				$iniY = $tab_top + 7;
-				$nexY = $tab_top + 7;
-              
-				// Complete object by loading several other informations
-				$licenseOrderList = new Licenseorder($this->_db);
-				$license = new License();
-						
-				if ($licenseOrderList->fetchList("fk_commande = $order->id","rowid ASC") > 0)
+			$iniY = $tab_top + 7;
+			$nexY = $tab_top + 7;
+			
+			// Complete object by loading several other informations
+			$licenseOrderList = new Licenseorder($this->_db);
+			$license = new License();
+					
+			if ($licenseOrderList->fetchList("fk_commande = $order->id","rowid ASC") > 0)
+			{
+				$i=0;
+				$licenseCount = count($licenseOrderList->dataset);
+				foreach($licenseOrderList->dataset as $data)
 				{
-					$i=0;
-					$licenseCount = count($licenseOrderList->dataset);
-					foreach($licenseOrderList->dataset as $data)
+					$license->key_mode=$data['key_mode'];
+					$license->output_mode=$data['output_mode'];
+					$license->code='';
+					$nexY = $iniY;// one license per page
+					
+					$pdf->SetFont('','', $default_font_size - 1);   // Dans boucle pour gerer multi-page
+					//Description of license order
+					$licenseIdentification = '<table><tr><td><b>'.$outputlangs->trans('LicenseIdentification').'</b></td><td colspan="2">'.$data['identification'].'</td></tr></table>';
+					$licenseNote = '<table><tr><td><b>'.$outputlangs->trans('LicenseNote').'</b></td><td colspan="2">'.$data['note'].'</td></tr></table>';
+					
+					$pdf->writeHTMLCell(150, 3, 30, $nexY, $outputlangs->convToOutputCharset($licenseIdentification), 1, 1, true);
+					$nexY=$pdf->GetY();
+					$pdf->writeHTMLCell(150, 3, 30, $nexY, $outputlangs->convToOutputCharset($licenseNote), 1, 1);
+					$nexY=$pdf->GetY();
+								
+					$licenseOrderDetList = new Licenseorderdet($this->_db);
+					$fk_license_order = $data['rowid'];
+					if ($licenseOrderDetList->fetchList("fk_license_order = $fk_license_order","rowid ASC") > 0)
 					{
-						$license->key_mode=$data['key_mode'];
-						$license->output_mode=$data['output_mode'];
-						$license->code='';
-						$nexY = $iniY;// one license per page
-						
-						$pdf->SetFont('','', $default_font_size - 1);   // Dans boucle pour gerer multi-page
-						//Description of license order
-						$licenseIdentification = '<table><tr><td><b>'.$outputlangs->trans('LicenseIdentification').'</b></td><td colspan="2">'.$data['identification'].'</td></tr></table>';
-						$licenseNote = '<table><tr><td><b>'.$outputlangs->trans('LicenseNote').'</b></td><td colspan="2">'.$data['note'].'</td></tr></table>';
-						
-						$pdf->writeHTMLCell(150, 3, 30, $nexY, $outputlangs->convToOutputCharset($licenseIdentification), 1, 1, true);
-						$nexY=$pdf->GetY();
-						$pdf->writeHTMLCell(150, 3, 30, $nexY, $outputlangs->convToOutputCharset($licenseNote), 1, 1);
-						$nexY=$pdf->GetY();
-									
-						$licenseOrderDetList = new Licenseorderdet($this->_db);
-						$fk_license_order = $data['rowid'];
-						if ($licenseOrderDetList->fetchList("fk_license_order = $fk_license_order","rowid ASC") > 0)
+						foreach ($licenseOrderDetList->dataset as $detData)
 						{
-							foreach ($licenseOrderDetList->dataset as $detData)
-							{
-								$nexY = $this->_licenseDetail($pdf,$detData,$license,30,$nexY,$outputlangs);
-							}
+							$nexY = $this->_licenseDetail($pdf,$detData,$license,30,$nexY,$outputlangs);
 						}
-						$otherLicenseOrders = new Licenseorder($this->_db);
-						$licenseIdentification=$data['identification'];
-						if ($otherLicenseOrders->fetchList("fk_customer = $order->socid AND identification = '$licenseIdentification'") > 0)
+					}
+					$otherLicenseOrders = new Licenseorder($this->_db);
+					$licenseIdentification=$data['identification'];
+					if ($otherLicenseOrders->fetchList("fk_customer = $order->socid AND identification = '$licenseIdentification'") > 0)
+					{
+						foreach ($otherLicenseOrders->dataset as $otherData)
 						{
-							foreach ($otherLicenseOrders->dataset as $otherData)
+							$otherLicenOrderId = $otherData['rowid'];
+							if ($otherLicenOrderId < $data['rowid'])
 							{
-								$otherLicenOrderId = $otherData['rowid'];
-								if ($otherLicenOrderId < $data['rowid'])
+								$otherLicenseOrdersDet = new Licenseorderdet($this->_db);
+								if ($otherLicenseOrdersDet->fetchList("fk_license_order = $otherLicenOrderId") > 0)
 								{
-									$otherLicenseOrdersDet = new Licenseorderdet($this->_db);
-									if ($otherLicenseOrdersDet->fetchList("fk_license_order = $otherLicenOrderId") > 0)
+									foreach ($otherLicenseOrdersDet->dataset as $detData)
 									{
-										foreach ($otherLicenseOrdersDet->dataset as $detData)
-										{
-											$nexY = $this->_licenseDetail($pdf,$detData,$license,30,$nexY,$outputlangs);
-										}
+										$nexY = $this->_licenseDetail($pdf,$detData,$license,30,$nexY,$outputlangs);
 									}
 								}
 							}
 						}
-						
-						if ($license->key_mode == 'multi')
-						{
-							$nexY+=$this->_license($pdf,$license,30,$nexY,$outputlangs);
-						}
-						
-						$this->_pagefoot($pdf, $order, $outputlangs);
-						$i++;
-						if ($i < $licenseCount) {
-							// New page
-							$pdf->AddPage();
-							$pagenb++;
-							$this->_pagehead($pdf, $order, 1, $outputlangs);
-							$pdf->SetFont('','', $default_font_size - 1);
-							$pdf->MultiCell(0, 3, '');		// Set interline to 3
-							$pdf->SetTextColor(0,0,0);
-						}
+					}
+					
+					if ($license->key_mode == 'multi')
+					{
+						$nexY+=$this->_license($pdf,$license,30,$nexY,$outputlangs);
+					}
+					
+					$this->_pagefoot($pdf, $order, $outputlangs);
+					$i++;
+					if ($i < $licenseCount) {
+						// New page
+						$pdf->AddPage();
+						$pagenb++;
+						$this->_pagehead($pdf, $order, 1, $outputlangs);
+						$pdf->SetFont('','', $default_font_size - 1);
+						$pdf->MultiCell(0, 3, '');		// Set interline to 3
+						$pdf->SetTextColor(0,0,0);
 					}
 				}
 				
@@ -270,21 +261,73 @@ class pdf_license extends CommonDocGenerator
 		}
 		else
 		{
-			$this->error=$langs->transnoentities("ErrorConstantNotDefined","LIVRAISON_OUTPUTDIR");
+			$this->error=$langs->transnoentities("ErrorCanNotCreateDir",$dir);
 			return 0;
 		}
 	}
 
 	/**
+	 *   	Show footer of page. Need this->_sender object
+     *
+	 *   	@param	PDF			&$pdf     			PDF
+	 * 		@param	Object		$object				Object to show
+	 *      @param	Translate	$outputlangs		Object lang for output
+	 *      @return	void
+	 */
+	function _pagefoot(&$pdf,$object,$outputlangs)
+	{
+		$pageFoot = pdf_pagefoot($pdf,$outputlangs,'DELIVERY_FREE_TEXT',$this->_sender,$this->_bottom_margin,$this->_left_margin,$this->_page_height,$object);
+		$pdf->SetDrawColor(128,128,128);
+	}
+	
+	/**
+	 * print license key
+	 *
+	 * @param	PDF			&$pdf     		Object PDF
+	 * @param object $license license containing output mode and code
+	 * @param int $x x position
+	 * @param int $y y position
+	 * @param	Translate	$outputlangs		Object lang for output
+	 *
+	 * @return string html output of license key
+	 */
+	
+	private function _license(&$pdf,$license,$x,$y,$outputlangs) 
+	{
+		
+		$licenseCode = '<table><tr><td><b>'.$outputlangs->trans('License').'</b></td><td colspan="2">'.$license->code.'</td></tr></table>';
+		$pdf->writeHTMLCell(150,3,$x,$y, $outputlangs->convToOutputCharset($licenseCode), 1,1,true);
+		$y = $pdf->getY()+7;
+		if (!$license->output_mode ||($license->output_mode != 'text'))
+		{
+			if (Licensekeylist::is2d($license->output_mode))
+			{
+				$style = array('border'=>true,'padding'=>'auto','position'=>'C');
+				$size = strlen($license->code)/2;
+				$pdf->write2DBarcode($license->code,$license->output_mode,$x+50,$y,$size,$size,$style);
+				$y = $y + $size + 7;
+			}
+			else
+			{
+				$style = array('border'=>true,'padding'=>'auto','position'=>'C');
+				$pdf->write1DBarcode($license->code,$license->output_mode,$x,$y,150,20,$style);
+				$y = $y + 20 + 7;
+			}
+		} 
+		return $y;
+	}
+
+	/**
 	 *  Show top header of page.
 	 *
-	 *  @param	PDF			&$pdf     		Object PDF
+	 *  @param	TCPDF		$pdf     		Object PDF
 	 *  @param  Object		$object     	Object to show
 	 *  @param  int	    	$showaddress    0=no, 1=yes
 	 *  @param  Translate	$outputlangs	Object lang for output
+	 *  @param	string		$titlekey		Translation key to show as title of document
 	 *  @return	void
 	 */
-	function _pagehead(&$pdf, $object, $showaddress, $outputlangs)
+	function _pagehead(&$pdf, $object, $showaddress, $outputlangs, $titlekey="License")
 	{
 		global $conf,$langs,$hookmanager;
 
@@ -337,7 +380,7 @@ class pdf_license extends CommonDocGenerator
 		$pdf->SetFont('','B', $default_font_size + 3);
 		$pdf->SetXY($posx,$posy);
 		$pdf->SetTextColor(0,0,60);
-		$title=$outputlangs->transnoentities("LicenseOrder");
+		$title=$outputlangs->transnoentities($titlekey);
 		$pdf->MultiCell(100, 3, $title, '', 'R');
 
 		$pdf->SetFont('','B',$default_font_size);
@@ -363,6 +406,19 @@ class pdf_license extends CommonDocGenerator
 		$pdf->SetTextColor(0,0,60);
 		$pdf->MultiCell(100, 3, $outputlangs->transnoentities("OrderDate")." : " . dol_print_date($object->date,"%d %b %Y",false,$outputlangs,true), '', 'R');
 
+		// Get contact
+		if (!empty($conf->global->DOC_SHOW_FIRST_SALES_REP))
+		{
+		    $arrayidcontact=$object->getIdContact('internal','SALESREPFOLL');
+		    if (count($arrayidcontact) > 0)
+		    {
+		        $usertmp=new User($this->db);
+		        $usertmp->fetch($arrayidcontact[0]);
+		        $pdf->SetTextColor(0,0,60);
+		        $pdf->MultiCell(190, 3, $langs->trans("SalesRepresentative")." : ".$usertmp->getFullName($langs), '', 'R');
+		    }
+		}
+		
 		$posy+=2;
 
 		// Show list of linked objects
@@ -370,6 +426,9 @@ class pdf_license extends CommonDocGenerator
 
 		if ($showaddress)
 		{
+			// Sender properties
+			$carac_emetteur = pdf_build_address($outputlangs, $this->_sender, $object->thirdparty);
+
 			// Show sender
 			$posy=42;
 			$posx=$this->_left_margin;
@@ -395,7 +454,7 @@ class pdf_license extends CommonDocGenerator
 			// Show sender information
 			$pdf->SetXY($posx+2,$posy);
 			$pdf->SetFont('','', $default_font_size - 1);
-			$pdf->MultiCell(80, 4, pdf_build_address($outputlangs,$this->_sender), 0, 'L');
+			$pdf->MultiCell(80, 4, $carac_emetteur, 0, 'L');
 
 
 
@@ -408,20 +467,17 @@ class pdf_license extends CommonDocGenerator
 				$result=$object->fetch_contact($arrayidcontact[0]);
 			}
 
-			// Recipient name
-			if (! empty($usecontact))
-			{
-				// On peut utiliser le nom de la societe du contact
-				if (! empty($conf->global->MAIN_USE_COMPANY_NAME_OF_CONTACT)) $socname = $object->contact->socname;
-				else $socname = $object->client->nom;
-				$carac_client_name=$outputlangs->convToOutputCharset($socname);
-			}
-			else
-			{
-				$carac_client_name=$outputlangs->convToOutputCharset($object->client->nom);
+			//Recipient name
+			// On peut utiliser le nom de la societe du contact
+			if ($usecontact && !empty($conf->global->MAIN_USE_COMPANY_NAME_OF_CONTACT)) {
+				$thirdparty = $object->contact;
+			} else {
+				$thirdparty = $object->thirdparty;
 			}
 
-			$carac_client=pdf_build_address($outputlangs,$this->_sender,$object->client,($usecontact?$object->contact:''),$usecontact,'target');
+			$carac_client_name= pdfBuildThirdpartyName($thirdparty, $outputlangs);
+
+			$carac_client=pdf_build_address($outputlangs,$this->_sender,$object->thirdparty,($usecontact?$object->contact:''),$usecontact,'target', $object);
 
 			// Show recipient
 			$widthrecbox=100;
@@ -442,64 +498,15 @@ class pdf_license extends CommonDocGenerator
 			$pdf->SetFont('','B', $default_font_size);
 			$pdf->MultiCell($widthrecbox, 4, $carac_client_name, 0, 'L');
 
+			$posy = $pdf->getY();
+
 			// Show recipient information
 			$pdf->SetFont('','', $default_font_size - 1);
-			$pdf->SetXY($posx+2,$posy+4+(dol_nboflines_bis($carac_client_name,50)*4));
+			$pdf->SetXY($posx+2,$posy);
 			$pdf->MultiCell($widthrecbox, 4, $carac_client, 0, 'L');
 		}
 
 		$pdf->SetTextColor(0,0,0);
-	}
-
-	/**
-	 *   	Show footer of page. Need this->_sender object
-     *
-	 *   	@param	PDF			&$pdf     			PDF
-	 * 		@param	Object		$object				Object to show
-	 *      @param	Translate	$outputlangs		Object lang for output
-	 *      @return	void
-	 */
-	function _pagefoot(&$pdf,$object,$outputlangs)
-	{
-		$pageFoot = pdf_pagefoot($pdf,$outputlangs,'DELIVERY_FREE_TEXT',$this->_sender,$this->_bottom_margin,$this->_left_margin,$this->_page_height,$object);
-		$pdf->SetDrawColor(128,128,128);
-	}
-	
-	/**
-	 * print license key
-	 *
-	 * @param	PDF			&$pdf     		Object PDF
-	 * @param object $license license containing output mode and code
-	 * @param int $x x position
-	 * @param int $y y position
-	 * @param	Translate	$outputlangs		Object lang for output
-	 *
-	 * @return string html output of license key
-	 */
-	
-	private function _license(&$pdf,$license,$x,$y,$outputlangs) 
-	{
-		
-		$licenseCode = '<table><tr><td><b>'.$outputlangs->trans('License').'</b></td><td colspan="2">'.$license->code.'</td></tr></table>';
-		$pdf->writeHTMLCell(150,3,$x,$y, $outputlangs->convToOutputCharset($licenseCode), 1,1,true);
-		$y = $pdf->getY()+7;
-		if (!$license->output_mode ||($license->output_mode != 'text'))
-		{
-			if (Licensekeylist::is2d($license->output_mode))
-			{
-				$style = array('border'=>true,'padding'=>'auto','position'=>'C');
-				$size = strlen($license->code)/2;
-				$pdf->write2DBarcode($license->code,$license->output_mode,$x+50,$y,$size,$size,$style);
-				$y = $y + $size + 7;
-			}
-			else
-			{
-				$style = array('border'=>true,'padding'=>'auto','position'=>'C');
-				$pdf->write1DBarcode($license->code,$license->output_mode,$x,$y,150,20,$style);
-				$y = $y + 20 + 7;
-			}
-		} 
-		return $y;
 	}
 	
 	/**
