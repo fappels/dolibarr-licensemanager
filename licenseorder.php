@@ -435,11 +435,11 @@ function htmlLicense($license) {
 	if (!$license->output_mode ||($license->output_mode == 'text')) {
 		return '<td align="center"><span padding="10%">'.$license->code.'</span></td>';
 	} elseif (Licensekeylist::is2d($license->output_mode)) {
-		require_once TCPDF_PATH.'2dbarcodes.php';
+		require_once TCPDF_PATH.'tcpdf_barcodes_2d.php';
 		$barcodeobj = new TCPDF2DBarcode($license->code, $license->output_mode);
 		return '<td align="center"><span padding="10%">'.$barcodeobj->getBarcodeHTML(2,2).'</span></td>';
 	} else {
-		require_once TCPDF_PATH.'barcodes.php';
+		require_once TCPDF_PATH.'tcpdf_barcodes_1d.php';
 		$barcodeobj = new TCPDFBarcode($license->code, $license->output_mode);
 		return '<td align="center"><span padding="10%">'.$barcodeobj->getBarcodeHTML().'</span></td>';
 	}
