@@ -95,8 +95,8 @@ class Licenseorderdet extends CommonObject
 		$sql.= " ".(! isset($this->fk_license_list)?'NULL':$this->fk_license_list).",";
 		$sql.= " ".(! isset($this->fk_license_order)?'NULL':$this->fk_license_order).",";
 		$sql.= " ".(! isset($this->fk_commande_det)?'NULL':$this->fk_commande_det).",";
-		$sql.= " ".(! isset($this->datec) || dol_strlen($this->datec)==0?'NULL':$this->db->idate($this->datec)).",";
-		$sql.= " ".(! isset($this->datev) || dol_strlen($this->datev)==0?'NULL':$this->db->idate($this->datev)).",";
+		$sql.= " ".(! isset($this->datec) || dol_strlen($this->datec)==0 ? 'NULL' : "'".$this->db->idate($this->datec))."'".",";
+		$sql.= " ".(! isset($this->datev) || dol_strlen($this->datev)==0 ? 'NULL' : "'".$this->db->idate($this->datev))."'".",";
         $sql.= " ".(! isset($this->license_key) || dol_strlen($this->license_key)==0?'NULL':"'".$this->db->escape($this->license_key)."'")."";
 		$sql.= ")";
 
