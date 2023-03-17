@@ -303,7 +303,7 @@ class pdf_license extends CommonDocGenerator
 			if (Licensekeylist::is2d($license->output_mode))
 			{
 				$style = array('border'=>true,'padding'=>'auto','position'=>'C');
-				$size = strlen($license->code)/2;
+				$size = strlen($license->code)/3;
 				$pdf->write2DBarcode($license->code,$license->output_mode,$x+50,$y,$size,$size,$style);
 				$y = $y + $size + 7;
 			}
