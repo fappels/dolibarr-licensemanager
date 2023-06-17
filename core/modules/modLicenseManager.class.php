@@ -37,7 +37,7 @@ class modLicenseManager extends DolibarrModules
 	 *
 	 *   @param      DoliDB		$db      Database handler
 	 */
-	function modLicenseManager($db)
+	public function __construct($db)
 	{
         global $langs,$conf;
 
