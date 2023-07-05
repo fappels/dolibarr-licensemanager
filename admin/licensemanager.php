@@ -309,7 +309,7 @@ function licensemanager_admin_prepare_head($tabs)
 	$head = array();
 
 	foreach ($tabs as $key => $value) {
-		$head[$h][0] = DOL_URL_ROOT."/licensemanager/admin/licensemanager.php?mode=".$value->mode;
+		$head[$h][0] = dol_buildpath("/licensemanager/admin/licensemanager.php?mode=".$value->mode, 1);
 		$head[$h][1] = $value->title;
 		$head[$h][2] = $key;
 		$h++;
