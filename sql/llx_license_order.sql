@@ -1,5 +1,5 @@
 -- ============================================================================
--- 
+--
 -- Copyright (C) 2013      Francis Appels        <francis.appels@z-application.com>
 --
 -- This program is free software; you can redistribute it and/or modify
@@ -29,5 +29,8 @@ CREATE TABLE `llx_license_order` (
   `fk_customer` INT NOT NULL,
   `fk_commande` INT NOT NULL,
   `qty_seq_id` INT NOT NULL,
+  `date_creation` date NULL,
+  `date_valid` date NULL,
+  `status` integer NOT NULL DEFAULT 0,
   PRIMARY KEY (`rowid`))
 ENGINE = InnoDB
