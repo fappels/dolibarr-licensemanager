@@ -283,7 +283,7 @@ class pdf_license extends CommonDocGenerator
 	/**
 	 * print license key
 	 *
-	 * @param	PDF			&$pdf     		Object PDF
+	 * @param	TCPDF			&$pdf     		Object PDF
 	 * @param object $license license containing output mode and code
 	 * @param int $x x position
 	 * @param int $y y position

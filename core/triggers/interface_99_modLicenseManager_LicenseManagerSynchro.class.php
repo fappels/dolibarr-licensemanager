@@ -30,7 +30,7 @@
 class InterfaceLicenseManagerSynchro
 {
     var $db;
-    
+
     /**
      *   Constructor
      *
@@ -39,15 +39,15 @@ class InterfaceLicenseManagerSynchro
     function __construct($db)
     {
         $this->db = $db;
-    
+
         $this->name = preg_replace('/^Interface/i','',get_class($this));
         $this->family = "module";
         $this->description = "Triggers of this module synchronise user modifaction with the licensemanager module.";
         $this->version = '1.0.1';            // 'development', 'experimental', 'dolibarr' or version
         $this->picto = 'technic';
     }
-    
-    
+
+
     /**
      *   Return name of trigger file
      *
@@ -57,7 +57,7 @@ class InterfaceLicenseManagerSynchro
     {
         return $this->name;
     }
-    
+
     /**
      *   Return description of trigger file
      *
@@ -84,7 +84,7 @@ class InterfaceLicenseManagerSynchro
         elseif ($this->version) return $this->version;
         else return $langs->trans("Unknown");
     }
-    
+
     /**
      *      Function called when a Dolibarrr business event is done.
      *      All functions "run_trigger" are triggered if file is inside directory htdocs/core/triggers
@@ -108,7 +108,7 @@ class InterfaceLicenseManagerSynchro
         }
         elseif ($action == 'USER_UPDATE_SESSION')
         {
-            // Warning: To increase performances, this action is triggered only if 
+            // Warning: To increase performances, this action is triggered only if
             // constant MAIN_ACTIVATE_UPDATESESSIONTRIGGER is set to 1.
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
@@ -162,7 +162,7 @@ class InterfaceLicenseManagerSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-		
+
         // Companies
         elseif ($action == 'COMPANY_CREATE')
         {
@@ -204,7 +204,7 @@ class InterfaceLicenseManagerSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             dol_include_once('/licensemanager/class/licenseproduct.class.php');
-            
+
             $licenseProduct = new Licenseproduct($this->db);
             if ($licenseProduct->fetch(0,$object->id) > 0) {
             	if ($licenseProduct->delete($user)<0) {
@@ -232,9 +232,9 @@ class InterfaceLicenseManagerSynchro
         	require_once(DOL_DOCUMENT_ROOT."/commande/class/commande.class.php");
             dol_include_once('/licensemanager/class/licenseorder.class.php');
         	dol_include_once('/licensemanager/class/licenseorderdet.class.php');
-        	
+
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
-            $licenseOrderList = new Licenseorder($this->db);     
+            $licenseOrderList = new Licenseorder($this->db);
             if ($licenseOrderList->fetchList("fk_commande = $object->id",'') > 0)
             {
             	foreach ($licenseOrderList->dataset as $data)
@@ -243,7 +243,7 @@ class InterfaceLicenseManagerSynchro
             		if ($licenseOrder->fetch($data['rowid'], 0,0) > 0)
             		{
             			$licenseOrderDetList = new Licenseorderdet($this->db);
-            			
+
             			if ($licenseOrderDetList->fetchList("fk_license_order = $licenseOrder->id",'') > 0)
             			{
             				foreach($licenseOrderDetList->dataset as $data)
@@ -262,22 +262,22 @@ class InterfaceLicenseManagerSynchro
             			}
             		}
             	}
-            	
+
             }
         }/*
         elseif ($action == 'ORDER_BUILDDOC')
         {
             global $langs;
         	dol_include_once('/licensemanager/class/pdf_license.class.php');
-        	
+
             $pdfLicense = new pdf_license($this->db);
             if ($pdfLicense->write_file($object, $langs) > 0)
             {
             	dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
-            } else 
+            } else
             {
             	dol_syslog("Trigger '".$this->name."' for action '$action' has error ".__FILE__.":".$pdfLicense->error);
-            	
+
             }
         }
         elseif ($action == 'ORDER_SENTBYMAIL')
@@ -301,11 +301,11 @@ class InterfaceLicenseManagerSynchro
         	$orderLine = new OrderLine($this->db);
             $order = new Commande($this->db);
             $orderLine->fetch($object->rowid);
-            
+
             if ($order->fetch($orderLine->fk_commande) > 0)
             {
             	$licenseProduct = new Licenseproduct($this->db);
-            	if ($licenseProduct->fetch(0,$orderLine->fk_product) > 0) 
+            	if ($licenseProduct->fetch(0,$orderLine->fk_product) > 0)
 	           	{
 	           		$licenseKeylist = new Licensekeylist($this->db);
 	           		if ($licenseKeylist->fetch($licenseProduct->fk_base_key) > 0)
@@ -316,12 +316,12 @@ class InterfaceLicenseManagerSynchro
 	           				$result = $licenseOrder->fetch(0, $order->id,$i);
 	           				if (($result>0) && ($licenseOrder->id > 0) && ($licenseOrder->key_mode == $licenseKeylist->mode))
 	           				{
-	           					// only add licenses of same mode to license order (single or multi) 
-	           					if ($this->createLicenseOrderDet($licenseKeylist,$licenseOrder->id,$licenseProduct->id,$object->rowid) > 0)
+	           					// only add licenses of same mode to license order (single or multi)
+	           					if ($this->createLicenseOrderDet($user, $licenseKeylist,$licenseOrder->id,$licenseProduct->id,$object->rowid) > 0)
 	           					{
 	           						dol_syslog("Trigger '".$this->name."' for action '$action' for product id=".$licenseProduct->fk_product);
 	           					}
-	           				} 
+	           				}
 	           				else
 	           				{
 	           					$licenseOrder->fk_customer = $order->socid;
@@ -333,26 +333,26 @@ class InterfaceLicenseManagerSynchro
 	           					$licenseOrder->qty_seq_id = $i;
 	           					if ($licenseOrder->create($user) > 0)
 	           					{
-	           						if ($this->createLicenseOrderDet($licenseKeylist,$licenseOrder->id,$licenseProduct->id,$object->rowid) > 0)
+	           						if ($this->createLicenseOrderDet($user, $licenseKeylist,$licenseOrder->id,$licenseProduct->id,$object->rowid) > 0)
 	           						{
 	           							dol_syslog("Trigger '".$this->name."' for action '$action' for product id=".$licenseProduct->fk_product);
 	           						}
 	           					}
 	           				}
 	           			}
-	           		}				         			
+	           		}
             	}
-            }            
+            }
         }
         elseif ($action == 'LINEORDER_DELETE')
         {
             // delete licenseorderdet
             dol_include_once('/licensemanager/class/licenseorder.class.php');
         	dol_include_once('/licensemanager/class/licenseorderdet.class.php');
-        	
+
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->rowid);
         	$licenseOrderDetList = new Licenseorderdet($this->db);
-        	
+
         	if ($licenseOrderDetList->fetchList("fk_commande_det = $object->rowid",'') > 0)
         	{
         		foreach($licenseOrderDetList->dataset as $data)
@@ -568,7 +568,7 @@ class InterfaceLicenseManagerSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-        
+
         // Categories
         elseif ($action == 'CATEGORY_CREATE')
         {
@@ -582,7 +582,7 @@ class InterfaceLicenseManagerSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-        
+
         // Projects
         elseif ($action == 'PROJECT_CREATE')
         {
@@ -596,7 +596,7 @@ class InterfaceLicenseManagerSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-        
+
         // Project tasks
         elseif ($action == 'TASK_CREATE')
         {
@@ -610,7 +610,7 @@ class InterfaceLicenseManagerSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-        
+
         // Task time spent
         elseif ($action == 'TASK_TIMESPENT_CREATE')
         {
@@ -624,7 +624,7 @@ class InterfaceLicenseManagerSynchro
         {
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
         }
-        
+
         // Shipping
         elseif ($action == 'SHIPPING_CREATE')
         {
@@ -653,7 +653,7 @@ class InterfaceLicenseManagerSynchro
 		*/
 		return 0;
     }
-    
+
     /**
      * function to create licenses for products with licenses assigned
      *
@@ -661,11 +661,11 @@ class InterfaceLicenseManagerSynchro
      * @param int $fk_license_order parent license order id
      * @param int $fk_license_product related product id
      * @param int $fk_commande_det related order line
-     *  
+     *
      * @return int create result NOK < 0 OK > 0
      */
-    
-    function createLicenseOrderDet($licenseKeylist,$fk_license_order,$fk_license_product,$fk_commande_det) 
+
+    private function createLicenseOrderDet($user, $licenseKeylist, $fk_license_order, $fk_license_product, $fk_commande_det)
     {
     	$now=dol_now();
 	    $licenseOrderDet = new Licenseorderdet($this->db);
@@ -674,7 +674,7 @@ class InterfaceLicenseManagerSynchro
 	    $licenseOrderDet->fk_commande_det = $fk_commande_det;
 	    $licenseOrderDet->datec = $now;
 	    $licenseOrderDet->datev = dol_time_plus_duree($now,$licenseKeylist->duration,$licenseKeylist->duration_unit);
-	    return $licenseOrderDet->create($user);	
+	    return $licenseOrderDet->create($user);
     }
 }
 ?>

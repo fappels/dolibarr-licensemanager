@@ -98,7 +98,7 @@ if(strstr($action,'set'))
 			$result=$licenseOrder->update($user);
 		}
 	}
-	
+
 	if (! $result > 0) $error++;
 
 	if (! $error)
@@ -111,7 +111,7 @@ if(strstr($action,'set'))
 		$db->rollback();
 		$mesg = '<font class="error">'.$langs->trans("Error").' '.$action.'</font>';
 	}
-} 
+}
 else if ($action == 'generate_licenses')
 {
 	// generate licenses
@@ -132,7 +132,7 @@ else if ($action == 'generate_licenses')
 					{
 						foreach ($licenseOrderDet->dataset as $data)
 						{
-							$key = generate($currentLicenseOrder,$data);
+							$key = generate($user, $currentLicenseOrder, $data);
 							if ($key)
 							{
 								$db->commit();
@@ -145,7 +145,7 @@ else if ($action == 'generate_licenses')
 							}
 						}
 					}
-				} 
+				}
 				else
 				{
 					$mesg = '<font class="error">'.$langs->trans("MissingIdentification").'</font>';
@@ -169,7 +169,7 @@ else if ($action == 'generate_licenses')
 			}
 		}
 	}
-} 
+}
 
 /***************************************************
 * VIEW
@@ -187,13 +187,13 @@ if ($id > 0 || ! empty($ref))
 {
 	$commande = new Commande($db);
 	$licenseModes = array();
-	
+
 	if ( $commande->fetch($id,$ref) > 0)
 	{
-		
+
 		$soc = new Societe($db);
 		$soc->fetch($commande->socid);
-		
+
 		$licenseOrder = new Licenseorder($db);
 		$multiLicense = new License();
 
@@ -211,7 +211,7 @@ if ($id > 0 || ! empty($ref))
 		print $form->showrefnav($commande,'ref','',1,'ref','ref');
 		print '</td>';
 		print '</tr>';
-		
+
 		if ($licenseOrder->fetchList("fk_commande = $commande->id",'') > 0) {
 			$licenseOrderCount = count($licenseOrder->dataset);
 			// Ref commande client
@@ -219,23 +219,23 @@ if ($id > 0 || ! empty($ref))
 			print $langs->trans('RefCustomer').'</td>';
 			print '<td colspan="2">'.$commande->ref_client;
 			print '</td>';
-			
+
 			// Third party
 			print '<tr><td>'.$langs->trans('Company').'</td>';
 			print '<td colspan="3">'.$soc->getNomUrl(1).'</td>';
 			print '</tr>';
-			
+
 			// Date
 			print '<tr><td>'.$langs->trans('Date').'</td>';
 			print '<td colspan="3">'.dol_print_date($commande->date,'daytext').'</td>';
 			print '</tr>';
-			
+
 			// Licenses qty
 			print '<tr><td>'.$langs->trans('Licenses').'</td>';
 			print '<td colspan="3">'.$licenseOrderCount.'</td>';
 			print '</tr>';
-			
-			
+
+
 		} else {
 			// no product with license
 			print '<tr><td width="18%">'.$langs->trans('License').'</td>';
@@ -245,13 +245,13 @@ if ($id > 0 || ! empty($ref))
 			print '</tr>';
 		}
 
-		
+
 		print '</table><br>';
 
 
 		/**
 		 *  license Orders grouped by license order
-		 * 
+		 *
 		 */
 		if ($licenseOrderCount > 0)
 		{
@@ -263,7 +263,7 @@ if ($id > 0 || ! empty($ref))
 				print '<table class="nobordernopadding" width="100%"><tr><td>';
 				print $langs->trans('LicenseIdentification');
 				print '</td>';
-				
+
 				if ($action != 'edit_identification') print '<td align="right"><a href="'.$_SERVER["PHP_SELF"].'?action=edit_identification'.$licenseOrderData['rowid'].'&amp;id='.$commande->id.'">'.img_edit($langs->trans('SetIdentification'),1).'</a></td>';
 				print '</tr></table>';
 				print '</td><td>';
@@ -282,13 +282,13 @@ if ($id > 0 || ! empty($ref))
 				}
 				print '</td>';
 				print '</tr>';
-				
+
 				// License note
 				print '<tr><td height="10" width="20%">';
 				print '<table class="nobordernopadding" width="100%"><tr><td>';
 				print $langs->trans('LicenseNote');
 				print '</td>';
-				
+
 				if ($action != 'edit_note') print '<td align="right"><a href="'.$_SERVER["PHP_SELF"].'?action=edit_note'.$licenseOrderData['rowid'].'&amp;id='.$commande->id.'">'.img_edit($langs->trans('SetNote'),1).'</a></td>';
 				print '</tr></table>';
 				print '</td><td>';
@@ -307,7 +307,7 @@ if ($id > 0 || ! empty($ref))
 				}
 				print '</td>';
 				print '</tr>';
-				
+
 				// License output mode
 				print '<tr><td height="10" width="20%">';
 				print '<table class="nobordernopadding" width="100%"><tr><td>';
@@ -332,10 +332,10 @@ if ($id > 0 || ! empty($ref))
 				}
 				print '</td>';
 				print '</tr>';
-				
+
 				$licenseOrderDet = new Licenseorderdet($db);
 				$currentLicenseOrder = new Licenseorder($db);
-				
+
 				if (($currentLicenseOrder->fetch($licenseOrderData['rowid'],0,0) > 0) && ($licenseOrderDet->fetchList("fk_license_order = $currentLicenseOrder->id") > 0))
 				{
 					print '<table class="liste" width="100%">';
@@ -359,7 +359,7 @@ if ($id > 0 || ! empty($ref))
 						licenseOrderDetList($form,$currentLicenseOrder,$data,$multiLicense);
 						print '</tr>';
 					}
-						
+
 					// TODO show other licenses of same customer and identification of older orders
 					$otherLicenseOrders = new Licenseorder($db);
 					if (isset($currentLicenseOrder->identification) && $otherLicenseOrders->fetchList("fk_customer = $commande->socid AND identification = '$currentLicenseOrder->identification'") > 0)
@@ -388,16 +388,16 @@ if ($id > 0 || ! empty($ref))
 							}
 						}
 					}
-						
+
 					if ($multiLicense->code)
 					{
 						// print multilicense
 						print '<tr><td colspan="'.($colnr-1).'" valign="center" align="center">'.$langs->trans('MultiLicense');
 						print htmlLicense($multiLicense);
 						print '</td>';
-						print '</tr>';						
+						print '</tr>';
 					}
-				
+
 					print '</table><br>';
 				}
 				print '</table><br>';
@@ -425,9 +425,9 @@ $db->close();
 
 /**
  * print license key
- * 
+ *
  * @param object $license license containing output mode and code
- * 
+ *
  * @return string html output of license key
  */
 
@@ -447,24 +447,24 @@ function htmlLicense($license) {
 
 /**
  * print license list
- * 
+ *
  * @param object $form form where list is part of
  * @param object $licenseOrder parent licenseorder
  * @param string $data licenseorderdet data
  * @param string &$multiLicense multiLicense reference to append multi licenses into
- * 
+ *
  * @return void
  */
-function licenseOrderDetList($form,$licenseOrder,$data,&$multiLicense) 
+function licenseOrderDetList($form,$licenseOrder,$data,&$multiLicense)
 {
 	global $langs;
-	
+
 	$licenseProduct = new Licenseproduct($licenseOrder->db);
 	$licenseKeylist = new Licensekeylist($licenseOrder->db);
 	$prod= new Product($licenseOrder->db);
 	$keyTypes = $licenseKeylist->getKeyTypes();
 	$license = new License();
-	
+
 	if ($licenseProduct->fetch($data['fk_license_product'])> 0) {
 		if ($licenseKeylist->fetch($licenseProduct->fk_base_key) > 0) {
 			//product
@@ -479,7 +479,7 @@ function licenseOrderDetList($form,$licenseOrder,$data,&$multiLicense)
 			//Date expire
 			print '<td align="center">'.dol_print_date($data['datev'],'daytext').'</td>';
 			// print Licensekey when it is a single license else print 'multi'
-			
+
 			if ($multiLicense->key_mode == 'multi')	{
 				if ($multiLicense->code) $multiLicense->code .= $licenseKeylist->multi_key_separator;
 				$multiLicense->code .= $data['license_key'];
@@ -490,7 +490,7 @@ function licenseOrderDetList($form,$licenseOrder,$data,&$multiLicense)
 				$license->key_mode = $licenseOrder->key_mode;
 				$license->code = $data['license_key'];
 				$license->ouput_mode = $licenseOrder->output_mode;
-					
+
 				print htmlLicense($license);
 			}
 		}
@@ -505,7 +505,7 @@ function licenseOrderDetList($form,$licenseOrder,$data,&$multiLicense)
  * @return string generated key
  */
 
-function generate($licenseOrder,$data)
+function generate($user, $licenseOrder,$data)
 {
 	$licenseProduct = new Licenseproduct($licenseOrder->db);
 	if ($licenseProduct->fetch($data['fk_license_product'],0) > 0)
