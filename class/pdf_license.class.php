@@ -32,7 +32,6 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/functions2.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
 
 dol_include_once('/licensemanager/class/licenseorder.class.php');
-dol_include_once('/licensemanager/class/licenseorderdet.class.php');
 dol_include_once('/licensemanager/class/licenseproduct.class.php');
 dol_include_once('/licensemanager/class/licensekeylist.class.php');
 dol_include_once('/licensemanager/class/licenselist.class.php');
@@ -44,7 +43,7 @@ dol_include_once('/licensemanager/class/licenselist.class.php');
 class pdf_license extends CommonDocGenerator
 {
 	// private properties
-	private $_db;	
+	private $_db;
 	private $_sender;
 	private $_format;
 	private $_bottom_margin;
@@ -53,12 +52,12 @@ class pdf_license extends CommonDocGenerator
 	private $_top_margin;
 	private $_page_height;
 	private $_page_width;
-	
+
 	// public properties
 	public $name;
 	public $description;
 	public $type;
-	
+
 	/**
 	 *	Constructor
 	 *
@@ -118,15 +117,15 @@ class pdf_license extends CommonDocGenerator
 
 		$objectref = dol_sanitizeFileName($order->ref);
 		$dir = $conf->commande->dir_output.'/'.$objectref;
-		
+
 		if (dol_mkdir($dir) >= 0)
 		{
 			$order->fetch_thirdparty();
-            
+
 			$langs->transnoentities("key") ? $fileIndication = "_" . $langs->transnoentities("key") :  $fileIndication = "_Key";
-			
+
 			$file = $dir . "/" . $objectref . $fileIndication . ".pdf";
-            
+
 			$pdf=pdf_getInstance($this->_format);
 
 			if (class_exists('TCPDF'))
@@ -143,7 +142,7 @@ class pdf_license extends CommonDocGenerator
 			}
 
 			$pdf->Open();
-			
+
 			$pagenb=0;
 			$pdf->SetDrawColor(128,128,128);
 
@@ -172,11 +171,11 @@ class pdf_license extends CommonDocGenerator
 
 			$iniY = $tab_top + 7;
 			$nexY = $tab_top + 7;
-			
+
 			// Complete object by loading several other informations
 			$licenseOrderList = new Licenseorder($this->_db);
 			$license = new License();
-					
+
 			if ($licenseOrderList->fetchList("fk_commande = $order->id","rowid ASC") > 0)
 			{
 				$i=0;
@@ -187,17 +186,17 @@ class pdf_license extends CommonDocGenerator
 					$license->output_mode=$data['output_mode'];
 					$license->code='';
 					$nexY = $iniY;// one license per page
-					
+
 					$pdf->SetFont('','', $default_font_size - 1);   // Dans boucle pour gerer multi-page
 					//Description of license order
 					$licenseIdentification = '<table><tr><td><b>'.$outputlangs->trans('LicenseIdentification').'</b></td><td colspan="2">'.$data['identification'].'</td></tr></table>';
 					$licenseNote = '<table><tr><td><b>'.$outputlangs->trans('LicenseNote').'</b></td><td colspan="2">'.$data['note'].'</td></tr></table>';
-					
+
 					$pdf->writeHTMLCell(150, 3, 30, $nexY, $outputlangs->convToOutputCharset($licenseIdentification), 1, 1, true);
 					$nexY=$pdf->GetY();
 					$pdf->writeHTMLCell(150, 3, 30, $nexY, $outputlangs->convToOutputCharset($licenseNote), 1, 1);
 					$nexY=$pdf->GetY();
-								
+
 					$licenseOrderDetList = new Licenseorderdet($this->_db);
 					$fk_license_order = $data['rowid'];
 					if ($licenseOrderDetList->fetchList("fk_license_order = $fk_license_order","rowid ASC") > 0)
@@ -227,12 +226,12 @@ class pdf_license extends CommonDocGenerator
 							}
 						}
 					}
-					
+
 					if ($license->key_mode == 'multi')
 					{
 						$nexY+=$this->_license($pdf,$license,30,$nexY,$outputlangs);
 					}
-					
+
 					$this->_pagefoot($pdf, $order, $outputlangs);
 					$i++;
 					if ($i < $licenseCount) {
@@ -245,17 +244,17 @@ class pdf_license extends CommonDocGenerator
 						$pdf->SetTextColor(0,0,0);
 					}
 				}
-				
+
 				$this->_pagefoot($pdf, $order, $outputlangs);
-				
+
 				if (method_exists($pdf,'AliasNbPages')) $pdf->AliasNbPages();
-                
+
 				$pdf->Close();
-                
+
 				$pdf->Output($file,'FD');
 				if (! empty($conf->global->MAIN_UMASK))
 					@chmod($file, octdec($conf->global->MAIN_UMASK));
-                
+
 				return 1;
 			}
 		}
@@ -279,7 +278,7 @@ class pdf_license extends CommonDocGenerator
 		$pageFoot = pdf_pagefoot($pdf,$outputlangs,'DELIVERY_FREE_TEXT',$this->_sender,$this->_bottom_margin,$this->_left_margin,$this->_page_height,$object);
 		$pdf->SetDrawColor(128,128,128);
 	}
-	
+
 	/**
 	 * print license key
 	 *
@@ -291,10 +290,10 @@ class pdf_license extends CommonDocGenerator
 	 *
 	 * @return string html output of license key
 	 */
-	
-	private function _license(&$pdf,$license,$x,$y,$outputlangs) 
+
+	private function _license(&$pdf,$license,$x,$y,$outputlangs)
 	{
-		
+
 		$licenseCode = '<table><tr><td><b>'.$outputlangs->trans('License').'</b></td><td colspan="2">'.$license->code.'</td></tr></table>';
 		$pdf->writeHTMLCell(150,3,$x,$y, $outputlangs->convToOutputCharset($licenseCode), 1,1,true);
 		$y = $pdf->getY()+7;
@@ -313,7 +312,7 @@ class pdf_license extends CommonDocGenerator
 				$pdf->write1DBarcode($license->code,$license->output_mode,$x,$y,150,20,$style);
 				$y = $y + 20 + 7;
 			}
-		} 
+		}
 		return $y;
 	}
 
@@ -418,7 +417,7 @@ class pdf_license extends CommonDocGenerator
 		        $pdf->MultiCell(190, 3, $langs->trans("SalesRepresentative")." : ".$usertmp->getFullName($langs), '', 'R');
 		    }
 		}
-		
+
 		$posy+=2;
 
 		// Show list of linked objects
@@ -508,7 +507,7 @@ class pdf_license extends CommonDocGenerator
 
 		$pdf->SetTextColor(0,0,0);
 	}
-	
+
 	/**
 	 * print license list
 	 *
@@ -526,7 +525,7 @@ class pdf_license extends CommonDocGenerator
 		$licenseKeylist = new Licensekeylist($this->_db);
 		$product = new Product($this->_db);
 		$keyTypes = $licenseKeylist->getKeyTypes();
-	
+
 		if ($licenseProduct->fetch($data['fk_license_product'])> 0)
 		{
 			if ($licenseKeylist->fetch($licenseProduct->fk_base_key) > 0)
@@ -544,9 +543,9 @@ class pdf_license extends CommonDocGenerator
 				$licenseExpire = '<table><tr><td><b>'.$outputlangs->trans('LicenseExpire').'</b></td><td colspan="2">'.dol_print_date($data['datev'],'daytext').'</td></tr></table>';
 				$pdf->writeHTMLCell(150, 3, $x, $y, $outputlangs->convToOutputCharset($licenseExpire), 1, 1);
 				$y=$pdf->getY();
-				
+
 				// print Licensekey when it is a single license else append license
-					
+
 				if ($license->key_mode == 'multi')
 				{
 					if ($license->code) $license->code .= $licenseKeylist->multi_key_separator;

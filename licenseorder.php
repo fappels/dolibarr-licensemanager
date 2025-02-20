@@ -47,7 +47,6 @@ require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/order.lib.php';
 
 dol_include_once('/licensemanager/class/licenseorder.class.php');
-dol_include_once('/licensemanager/class/licenseorderdet.class.php');
 dol_include_once('/licensemanager/class/licenseproduct.class.php');
 dol_include_once('/licensemanager/class/licensekeylist.class.php');
 dol_include_once('/licensemanager/class/licenselist.class.php');
@@ -451,7 +450,7 @@ function htmlLicense($license) {
  * @param object $form form where list is part of
  * @param object $licenseOrder parent licenseorder
  * @param string $data licenseorderdet data
- * @param string &$multiLicense multiLicense reference to append multi licenses into
+ * @param License &$multiLicense multiLicense reference to append multi licenses into
  *
  * @return void
  */

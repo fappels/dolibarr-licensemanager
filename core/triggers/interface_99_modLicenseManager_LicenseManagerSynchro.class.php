@@ -231,7 +231,6 @@ class InterfaceLicenseManagerSynchro
         // delete licenseorder and licenseorderdet
         	require_once(DOL_DOCUMENT_ROOT."/commande/class/commande.class.php");
             dol_include_once('/licensemanager/class/licenseorder.class.php');
-        	dol_include_once('/licensemanager/class/licenseorderdet.class.php');
 
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->id);
             $licenseOrderList = new Licenseorder($this->db);
@@ -256,7 +255,7 @@ class InterfaceLicenseManagerSynchro
             					}
             				}
             			}
-            			if ($licenseOrder->delete($user> 0))
+            			if ($licenseOrder->delete($user, 0))
             			{
             				dol_syslog("Trigger '".$this->name."' for action '$action' for licenseorder ".__FILE__.". id=".$licenseOrder->id);
             			}
@@ -295,7 +294,6 @@ class InterfaceLicenseManagerSynchro
         	dol_include_once('/licensemanager/class/licensekeylist.class.php');
         	dol_include_once('/licensemanager/class/licenseproduct.class.php');
         	dol_include_once('/licensemanager/class/licenseorder.class.php');
-        	dol_include_once('/licensemanager/class/licenseorderdet.class.php');
         	//launch
         	dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->rowid);
         	$orderLine = new OrderLine($this->db);
@@ -348,7 +346,6 @@ class InterfaceLicenseManagerSynchro
         {
             // delete licenseorderdet
             dol_include_once('/licensemanager/class/licenseorder.class.php');
-        	dol_include_once('/licensemanager/class/licenseorderdet.class.php');
 
             dol_syslog("Trigger '".$this->name."' for action '$action' launched by ".__FILE__.". id=".$object->rowid);
         	$licenseOrderDetList = new Licenseorderdet($this->db);
