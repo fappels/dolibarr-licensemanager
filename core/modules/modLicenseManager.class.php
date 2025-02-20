@@ -20,7 +20,7 @@
 
 /**
  * 	\defgroup   Module Dolibarr LicenseManager
- *  \brief      Module description and activation of LicenseManager module, 
+ *  \brief      Module description and activation of LicenseManager module,
  *  			a module wich provides license key managment of sold Software Services
  *  \file       htdocs/extdirect/core/modules/modLicenseManager.class.php
  */
@@ -57,11 +57,9 @@ class modLicenseManager extends DolibarrModules
 		// Module description, used if translation string 'ModuleXXXDesc' not found (where XXX is value of numeric property 'numero' of module)
 		$this->description = "module wich provides license key managment of sold Software products and services";
 		// Possible values for version are: 'development', 'experimental', 'dolibarr' or version
-		$this->version = '1.0.4';
+		$this->version = '1.0.5';
 		// Key used in llx_const table to save module status enabled/disabled (where MYMODULE is value of property name of module in uppercase)
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
-		// Where to store the module in setup page (0=common,1=interface,2=others,3=very specific)
-		$this->special = 0;
 		// Name of image file used for this module.
 		// If file is in theme/yourtheme/img directory under name object_pictovalue.png, use this->picto='pictovalue'
 		// If file is in module/img directory under name object_pictovalue.png, use this->picto='pictovalue@module'
@@ -72,22 +70,42 @@ class modLicenseManager extends DolibarrModules
 		// for specific path of parts (eg: /mymodule/core/modules/barcode)
 		// for specific css file (eg: /mymodule/css/mymodule.css.php)
 		$this->module_parts = array(
-		                       	'triggers' => 1,                                 // Set this to 1 if module has its own trigger directory
-									'login' => 0,                                    // Set this to 1 if module has its own login method directory
-									'substitutions' => 0,                            // Set this to 1 if module has its own substitution function file
-									'menus' => 0,                                    // Set this to 1 if module has its own menus handler directory
-									'barcode' => 0,                                  // Set this to 1 if module has its own barcode directory
-									'models' => 0//,                                 // Set this to 1 if module has its own models directory
-		//							'theme' => 0,                                    	// Set this to 1 if module has its own theme directory (theme)
-		//                        	'tpl' => 0,                                      	// Set this to 1 if module overwrite template dir (tpl)
-		//							'js' => array('/mymodule/js/mymodule.js'),          // Set this to relative path of js file if module must load a js on all pages
-		//							'dir' => array('output' => 'othermodulename'),      // To force the default directories names
-		//							'css' => '/mymodule/css/mymodule.css.php',       // Set this to relative path of css if module has its own css file
-		//							'hooks' => array('hookcontext1','hookcontext2')  // Set here all hooks context managed by module
-		//							'workflow' => array('order' => array('WORKFLOW_ORDER_AUTOCREATE_INVOICE')) // Set here all workflow context managed by module
-		                        );
-		//$this->module_parts = array();
-
+			// Set this to 1 if module has its own trigger directory (core/triggers)
+			'triggers' => 1,
+			// Set this to 1 if module has its own login method file (core/login)
+			'login' => 0,
+			// Set this to 1 if module has its own substitution function file (core/substitutions)
+			'substitutions' => 0,
+			// Set this to 1 if module has its own menus handler directory (core/menus)
+			'menus' => 0,
+			// Set this to 1 if module overwrite template dir (core/tpl)
+			'tpl' => 0,
+			// Set this to 1 if module has its own barcode directory (core/modules/barcode)
+			'barcode' => 0,
+			// Set this to 1 if module has its own models directory (core/modules/xxx)
+			'models' => 0,
+			// Set this to 1 if module has its own printing directory (core/modules/printing)
+			'printing' => 0,
+			// Set this to 1 if module has its own theme directory (theme)
+			'theme' => 0,
+			// Set this to relative path of css file if module has its own css file
+			'css' => array(
+				//'/licensemanager/css/lokarea.css.php',
+			),
+			// Set this to relative path of js file if module must load a js on all pages
+			'js' => array(
+				//   '/licensemanager/js/lokarea.js.php',
+			),
+			// Set here all hooks context managed by module. To find available hook context, make a "grep -r '>initHooks(' *" on source code. You can also set hook context to 'all'
+			'hooks' => array(
+				'data' => array(
+					'orderlist',
+				),
+				'entity' => '0',
+			),
+			// Set this to 1 if features of module are opened to external users
+			'moduleforexternal' => 0,
+		);
 		// Data directories to create when module is enabled.
 		// Example: this->dirs = array("/mymodule/temp");
 		$this->dirs = array();
@@ -129,7 +147,7 @@ class modLicenseManager extends DolibarrModules
 		// 'contact'          to add a tab in contact view
 		// 'categories_x'	  to add a tab in category view (replace 'x' by type of category (0=product, 1=supplier, 2=customer, 3=member)
         $this->tabs = array('product:+licenseproduct:License:licensemanager@licensemanager:$user->rights->produit->lire:/licensemanager/licenseproduct.php?id=__ID__',  // To add a new tab identified by code tabname1
-                            'order:+licenseorder:Licenses:licensemanager@licensemanager:$user->rights->commande->lire:/licensemanager/licenseorder.php?id=__ID__'); 
+                            'order:+licenseorder:Licenses:licensemanager@licensemanager:$user->rights->commande->lire:/licensemanager/licenseorder.php?id=__ID__');
 
         // Dictionnaries
         if (! isset($conf->licensemanager->enabled))
@@ -177,23 +195,32 @@ class modLicenseManager extends DolibarrModules
 		$r++;
 		*/
 
-		// Permissions
-		$this->rights = array();		// Permission array used by this module
-		$r=0;
+		// Permissions provided by this module
+		$this->rights = array();
+		$r = 0;
+		// Add here entries to declare new permissions
+		/* BEGIN MODULEBUILDER PERMISSIONS */
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 0 + 1);
+		$this->rights[$r][1] = 'Read licenses';
+		$this->rights[$r][4] = 'licensemanager';
+		$this->rights[$r][5] = 'read';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 1 + 1);
+		$this->rights[$r][1] = 'Create/Update licenses';
+		$this->rights[$r][4] = 'licensemanager';
+		$this->rights[$r][5] = 'write';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 2 + 1);
+		$this->rights[$r][1] = 'Delete licenses';
+		$this->rights[$r][4] = 'licensemanager';
+		$this->rights[$r][5] = 'delete';
+		$r++;
 
-		// Add here list of permission defined by an id, a label, a boolean and two constant strings.
-		// Example:
-		// $this->rights[$r][0] = 2000; 				// Permission id (must not be already used)
-		// $this->rights[$r][1] = 'Permision label';	// Permission label
-		// $this->rights[$r][3] = 1; 					// Permission by default for new user (0/1)
-		// $this->rights[$r][4] = 'level1';				// In php code, permission will be checked by test if ($user->rights->permkey->level1->level2)
-		// $this->rights[$r][5] = 'level2';				// In php code, permission will be checked by test if ($user->rights->permkey->level1->level2)
-		// $r++;
-		
+
 		// Main menu entries
 		$this->menu = array();			// List of menus to add
 		$r=0;
-		
+
 		// Add here entries to declare new menus
 		//
 		// Example to declare a new Top Menu entry and its Left menu entry:
@@ -225,11 +252,11 @@ class modLicenseManager extends DolibarrModules
 		//							'target'=>'',
 		//							'user'=>2);				                // 0=Menu for internal users, 1=external users, 2=both
 		// $r++;
-		
-		
+
+
 		// Exports
 		$r=1;
-		
+
 		// Example:
 		// $this->export_code[$r]=$this->rights_class.'_'.$r;
 		// $this->export_label[$r]='CustomersInvoicesAndInvoiceLines';	// Translation key (used only if key ExportDataset_xxx_z not found)
