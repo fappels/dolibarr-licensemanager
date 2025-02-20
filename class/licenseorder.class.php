@@ -491,6 +491,126 @@ class Licenseorder extends CommonObject
 		return $this->deleteLineCommon($user, $idline, $notrigger);
 	}
 
+	/**
+	 * function to generate and store the key for product license
+	 *
+	 * @param User $user User who generates key
+	 * @param array $data assosiative array with license order detail data
+	 * @return string generated key
+	 */
+
+	public function generate($user, $data)
+	{
+		$licenseProduct = new Licenseproduct($this->db);
+		if ($licenseProduct->fetch($data['fk_license_product'],0) > 0)
+		{
+			$licenseKeylist = new Licensekeylist($this->db);
+			if ($licenseKeylist->fetch($licenseProduct->fk_base_key) > 0)
+			{
+				$licensenOrderDet = new Licenseorderdet($this->db);
+				if ($licensenOrderDet->fetch($data["rowid"])> 0)
+				{
+					if ($licensenOrderDet->license_key == '')
+					{
+						if ($licenseKeylist->type == 0)
+						{
+							$hashData = array($this->identification,$licenseProduct->option_code,$licenseKeylist->option_code);
+							$licensenOrderDet->license_key = $licenseKeylist->generate($hashData);
+							if ($licensenOrderDet->update($user) > 0)
+							{
+								return $licensenOrderDet->license_key;
+							}
+						} else
+						{
+							$licenseList = new Licenselist($this->db);
+							if ($licenseList->fetchNext($licenseKeylist->id) > 0)
+							{
+								$licensenOrderDet->license_key = $licenseList->external_key;
+								if ($licensenOrderDet->update($user) > 0)
+								{
+									return $licensenOrderDet->license_key;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		return NULL;
+	}
+
+	/**
+	 * print license list
+	 *
+	 * @param object $form form where list is part of
+	 * @param string $data licenseorderdet data
+	 * @param License &$multiLicense multiLicense reference to append multi licenses into
+	 *
+	 * @return void
+	 */
+	public function licenseOrderDetList($form, $data, &$multiLicense)
+	{
+		global $langs;
+
+		$licenseProduct = new Licenseproduct($this->db);
+		$licenseKeylist = new Licensekeylist($this->db);
+		$prod= new Product($this->db);
+		$keyTypes = $licenseKeylist->getKeyTypes();
+		$license = new License();
+
+		if ($licenseProduct->fetch($data['fk_license_product'])> 0) {
+			if ($licenseKeylist->fetch($licenseProduct->fk_base_key) > 0) {
+				//product
+				$prod->fetch($licenseProduct->fk_product);
+				print '<td align="center">'.$form->textwithtooltip($prod->ref,$prod->label,1).'</td>';
+				//LicenseType
+				print '<td align="center">'.$keyTypes[$licenseKeylist->type].'</td>';
+				//Licensename
+				print '<td align="center">'.$licenseKeylist->name.'</td>';
+				//Date create
+				print '<td align="center">'.dol_print_date($data['datec'],'daytext').'</td>';
+				//Date expire
+				print '<td align="center">'.dol_print_date($data['datev'],'daytext').'</td>';
+				// print Licensekey when it is a single license else print 'multi'
+
+				if ($multiLicense->key_mode == 'multi')	{
+					if ($multiLicense->code) $multiLicense->code .= $licenseKeylist->multi_key_separator;
+					$multiLicense->code .= $data['license_key'];
+					if ($data['license_key'] != '')	{
+						print '<td align="center">'.$langs->trans('multi').'</td>';
+					}
+				} else {
+					$license->key_mode = $this->key_mode;
+					$license->code = $data['license_key'];
+					$license->output_mode = $this->output_mode;
+
+					print $this->htmlLicense($license);
+				}
+			}
+		}
+	}
+
+	/**
+	 * print license key
+	 *
+	 * @param object $license license containing output mode and code
+	 *
+	 * @return string html output of license key
+	 */
+
+	public function htmlLicense($license) {
+		if (!$license->output_mode ||($license->output_mode == 'text')) {
+			return '<td align="center"><span padding="10%">'.$license->code.'</span></td>';
+		} elseif (Licensekeylist::is2d($license->output_mode)) {
+			require_once TCPDF_PATH.'tcpdf_barcodes_2d.php';
+			$barcodeobj = new TCPDF2DBarcode($license->code, $license->output_mode);
+			return '<td align="center"><span padding="10%">'.$barcodeobj->getBarcodeHTML(2,2).'</span></td>';
+		} else {
+			require_once TCPDF_PATH.'tcpdf_barcodes_1d.php';
+			$barcodeobj = new TCPDFBarcode($license->code, $license->output_mode);
+			return '<td align="center"><span padding="10%">'.$barcodeobj->getBarcodeHTML().'</span></td>';
+		}
+	}
 
 	/**
 	 *	Validate object
@@ -1015,7 +1135,7 @@ class Licenseorder extends CommonObject
 	{
 		$this->lines = array();
 
-		$objectline = new LicenseorderLine($this->db);
+		$objectline = new Licenseorderdet($this->db);
 		$result = $objectline->fetchAll('ASC', 'position', 0, 0, '(fk_licenseorder:=:'.((int) $this->id).')');
 
 		if (is_numeric($result)) {
@@ -1360,5 +1480,5 @@ class License
 {
 	public $code;
 	public $key_mode;
-	public $ouput_mode;
+	public $output_mode;
 }
