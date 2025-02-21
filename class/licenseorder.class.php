@@ -26,7 +26,7 @@
 
 // Put here all includes required by your class file
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
-
+require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
 /**
  * Class for Licenseorder
  */
@@ -469,6 +469,29 @@ class Licenseorder extends CommonObject
 
 		$result = $this->fetchLinesCommon('', $noextrafields);
 		return $result;
+	}
+
+	/**
+	 * function add licenses for products with licenses assigned
+	 *
+	 * @param object $licenseKeylist $license source object
+	 * @param int $fk_license_order parent license order id
+	 * @param int $fk_license_product related product id
+	 * @param int $fk_commande_det related order line
+	 *
+	 * @return int create result NOK < 0 OK > 0
+	 */
+
+	public function addLine($user, $licenseKeylist, $fk_license_order, $fk_license_product, $fk_commande_det)
+	{
+		$now=dol_now();
+		$licenseOrderDet = new Licenseorderdet($this->db);
+		$licenseOrderDet->fk_license_order = $fk_license_order;
+		$licenseOrderDet->fk_license_product = $fk_license_product;
+		$licenseOrderDet->fk_commande_det = $fk_commande_det;
+		$licenseOrderDet->datec = $now;
+		$licenseOrderDet->datev = dol_time_plus_duree($now,$licenseKeylist->duration,$licenseKeylist->duration_unit);
+		return $licenseOrderDet->create($user);
 	}
 
 	/**
