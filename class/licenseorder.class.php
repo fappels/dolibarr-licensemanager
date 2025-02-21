@@ -121,6 +121,7 @@ class Licenseorder extends CommonObject
 	);
 // END MODULEBUILDER PROPERTIES
 
+	public $note;
 	public $fk_user_author;
 	public $identification;
 	public $output_mode;
@@ -278,17 +279,16 @@ class Licenseorder extends CommonObject
 		$sql.= " t.identification";
 
 		$sql.= " FROM ".MAIN_DB_PREFIX."license_order as t";
-		if (!empty($filter)){
+		if (!empty($filter)) {
 			$sql.= " WHERE ".$filter;
 		}
-		if (!empty($orderBy)){
+		if (!empty($orderBy)) {
 			$sql.= " ORDER BY ".$orderBy;
 		}
 
 		dol_syslog(get_class($this)."::fetchList sql=".$sql, LOG_DEBUG);
 		$resql=$this->db->query($sql);
-		if ($resql)
-		{
+		if ($resql) {
 			$num = $this->db->num_rows($resql);
 			$row = 0;
 			$this->dataset=null;
@@ -311,9 +311,7 @@ class Licenseorder extends CommonObject
 			$this->db->free($resql);
 
 			return $row;
-		}
-		else
-		{
+		} else {
 			$this->error="Error ".$this->db->lasterror();
 			dol_syslog(get_class($this)."::fetch ".$this->error, LOG_ERR);
 			return -1;
@@ -502,32 +500,23 @@ class Licenseorder extends CommonObject
 	public function generate($user, $data)
 	{
 		$licenseProduct = new Licenseproduct($this->db);
-		if ($licenseProduct->fetch($data['fk_license_product'],0) > 0)
-		{
+		if ($licenseProduct->fetch($data['fk_license_product'], 0) > 0) {
 			$licenseKeylist = new Licensekeylist($this->db);
-			if ($licenseKeylist->fetch($licenseProduct->fk_base_key) > 0)
-			{
+			if ($licenseKeylist->fetch($licenseProduct->fk_base_key) > 0) {
 				$licensenOrderDet = new Licenseorderdet($this->db);
-				if ($licensenOrderDet->fetch($data["rowid"])> 0)
-				{
-					if ($licensenOrderDet->license_key == '')
-					{
-						if ($licenseKeylist->type == 0)
-						{
-							$hashData = array($this->identification,$licenseProduct->option_code,$licenseKeylist->option_code);
+				if ($licensenOrderDet->fetch($data["rowid"]) > 0) {
+					if ($licensenOrderDet->license_key == '') {
+						if ($licenseKeylist->type == 0) {
+							$hashData = array($this->identification, $licenseProduct->option_code, $licenseKeylist->option_code);
 							$licensenOrderDet->license_key = $licenseKeylist->generate($hashData);
-							if ($licensenOrderDet->update($user) > 0)
-							{
+							if ($licensenOrderDet->update($user) > 0) {
 								return $licensenOrderDet->license_key;
 							}
-						} else
-						{
+						} else {
 							$licenseList = new Licenselist($this->db);
-							if ($licenseList->fetchNext($licenseKeylist->id) > 0)
-							{
+							if ($licenseList->fetchNext($licenseKeylist->id) > 0) {
 								$licensenOrderDet->license_key = $licenseList->external_key;
-								if ($licensenOrderDet->update($user) > 0)
-								{
+								if ($licensenOrderDet->update($user) > 0) {
 									return $licensenOrderDet->license_key;
 								}
 							}

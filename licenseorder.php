@@ -86,10 +86,10 @@ if (strstr($action, 'set')) {
 		if ($actionDet[1] == 'identification') {
 			$licenseOrder->identification = $_POST['identification'];
 			$result = $licenseOrder->update($user);
-		} else if ($actionDet[1] == 'note') {
+		} elseif ($actionDet[1] == 'note') {
 			$licenseOrder->note = $_POST['note'];
 			$result = $licenseOrder->update($user);
-		} else if ($actionDet[1] == 'outputmode') {
+		} elseif ($actionDet[1] == 'outputmode') {
 			$licenseOrder->output_mode = $_POST['output_mode'];
 			$result = $licenseOrder->update($user);
 		}
@@ -104,7 +104,7 @@ if (strstr($action, 'set')) {
 		$db->rollback();
 		$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $action . '</font>';
 	}
-} else if ($action == 'generate_licenses') {
+} elseif ($action == 'generate_licenses') {
 	// generate licenses
 	$order = new Commande($db);
 	if ($order->fetch($id) > 0) {
@@ -134,7 +134,7 @@ if (strstr($action, 'set')) {
 			}
 		}
 	}
-} else if ($action == 'generate_doc') {
+} elseif ($action == 'generate_doc') {
 	// generate document
 	$order = new Commande($db);
 	if ($order->fetch($id) > 0) {
@@ -178,7 +178,7 @@ if ($id > 0 || ! empty($ref)) {
 		$author->fetch($commande->user_author_id);
 
 		$head = commande_prepare_head($commande);
-		dol_fiche_head($head, 'licenseorder', $langs->trans("CustomerOrder"), 0, 'order');
+		print dol_get_fiche_head($head, 'licenseorder', $langs->trans("CustomerOrder"), 0, 'order');
 
 		print '<table class="border" width="100%">';
 
