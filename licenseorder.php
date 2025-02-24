@@ -113,23 +113,79 @@ if (strstr($action, 'set')) {
 			foreach ($licenseOrder->dataset as $licenseOrderData) {
 				$licenseOrderDet = new Licenseorderdet($db);
 				$currentLicenseOrder = new Licenseorder($db);
+				$generated = false;
 
 				if ($licenseOrderData['identification'] != '') {
 					if (($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) && ($licenseOrderDet->fetchList("fk_license_order = $currentLicenseOrder->id") > 0)) {
 						foreach ($licenseOrderDet->dataset as $data) {
 							$key = $currentLicenseOrder->generate($user, $data);
-							if ($key) {
+							if (is_string($key)) {
 								$db->commit();
-								$mesg = '<font class="ok">' . $langs->trans("Generated") . '</font>';
+								$generated = true;
 							} else {
 								$db->rollback();
-								$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $action . '</font>';
+								$generated = false;
+								$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $langs->trans($currentLicenseOrder->error) . '</font>';
+								break;
 							}
+						}
+						if ($generated) {
+							$mesg = '<font class="ok">' . $langs->trans("Generated") . '</font>';
+							$currentLicenseOrder->validate($user);
 						}
 					}
 				} else {
 					$mesg = '<font class="error">' . $langs->trans("MissingIdentification") . '</font>';
 					break;
+				}
+			}
+		}
+	}
+} elseif ($action == 'renew_licenses') {
+	// Renew licenses
+	$order = new Commande($db);
+	if ($order->fetch($id) > 0) {
+		$licenseOrder = new Licenseorder($db);
+		if ($licenseOrder->fetchList("fk_commande = $order->id", '') > 0) {
+			foreach ($licenseOrder->dataset as $licenseOrderData) {
+				$licenseOrderDet = new Licenseorderdet($db);
+				$currentLicenseOrder = new Licenseorder($db);
+				$renewed = false;
+
+				if (($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) && ($licenseOrderDet->fetchList("fk_license_order = $currentLicenseOrder->id") > 0)) {
+					foreach ($licenseOrderDet->dataset as $data) {
+						$key = $currentLicenseOrder->renew($user, $data);
+						if (is_string($key)) {
+							$db->commit();
+							$renewed = true;
+						} else {
+							$db->rollback();
+							$renewed = false;
+							$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $langs->trans($currentLicenseOrder->error) . '</font>';
+							break;
+						}
+					}
+					if ($renewed) {
+						$mesg = '<font class="ok">' . $langs->trans("Renewed") . '</font>';
+					}
+				}
+			}
+		}
+	}
+} elseif ($action == 'cancel_licenses') {
+	// Renew licenses
+	$order = new Commande($db);
+	if ($order->fetch($id) > 0) {
+		$licenseOrder = new Licenseorder($db);
+		if ($licenseOrder->fetchList("fk_commande = $order->id", '') > 0) {
+			foreach ($licenseOrder->dataset as $licenseOrderData) {
+				$currentLicenseOrder = new Licenseorder($db);
+
+				if ($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) {
+					$result = $currentLicenseOrder->cancel($user);
+					if ($result > 0) {
+						$mesg = '<font class="ok">' . $langs->trans("Canceled") . '</font>';
+					}
 				}
 			}
 		}
@@ -314,6 +370,8 @@ if ($id > 0 || ! empty($ref)) {
 					$colnr++;
 					print '<td align="center">' . $langs->trans("DateExpire") . '</td>';
 					$colnr++;
+					print '<td align="center">' . $langs->trans("Status") . '</td>';
+					$colnr++;
 					print '<td align="center">' . $langs->trans("LicenseKey") . '</td>';
 					$colnr++;
 					print "</tr>\n";
@@ -364,12 +422,14 @@ if ($id > 0 || ! empty($ref)) {
 				print '</table><br>';
 			}
 			print '<div class="tabsAction">';
-			print '<div class="inline-block divButAction"><a class="butAction" href="' . $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_licenses">' . $langs->trans('GenerateLicense') . '</a></div>';
+			print dolGetButtonAction('', $langs->trans('RenewLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=renew_licenses');
+			print dolGetButtonAction('', $langs->trans('GenerateLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_licenses');
 			if ($commande->statut == 0) {
-				print '<div class="inline-block divButAction"><a class="butActionRefused" href="' . $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_doc">' . $langs->trans('GenerateLicenseDoc') . '</a></div>';
+				print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_doc', '', 0);
 			} else {
-				print '<div class="inline-block divButAction"><a class="butAction" href="' . $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_doc">' . $langs->trans('GenerateLicenseDoc') . '</a></div>';
+				print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_doc');
 			}
+			print dolGetButtonAction('', $langs->trans('CancelLicense'), 'danger', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=cancel_licenses');
 			print '</div>';
 		}
 	} else {

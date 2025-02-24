@@ -344,120 +344,6 @@ class Licenseorder extends CommonObject
 	}
 
 	/**
-	 * Clone an object into another one
-	 *
-	 * @param  	User 	$user      	User that creates
-	 * @param  	int 	$fromid     Id of object to clone
-	 * @return 	mixed 				New object created, <0 if KO
-	 */
-	public function createFromClone(User $user, $fromid)
-	{
-		global $langs, $extrafields;
-		$error = 0;
-
-		dol_syslog(__METHOD__, LOG_DEBUG);
-
-		$object = new self($this->db);
-
-		$this->db->begin();
-
-		// Load source object
-		$result = $object->fetchCommon($fromid);
-		if ($result > 0 && !empty($object->table_element_line)) {
-			$object->fetchLines();
-		}
-
-		// get lines so they will be clone
-		//foreach($this->lines as $line)
-		//	$line->fetch_optionals();
-
-		// Reset some properties
-		unset($object->id);
-		unset($object->fk_user_author);
-		unset($object->import_key);
-
-		// Clear fields
-		if (property_exists($object, 'ref')) {
-			$object->ref = empty($this->fields['ref']['default']) ? "Copy_Of_".$object->ref : $this->fields['ref']['default'];
-		}
-		if (property_exists($object, 'label')) {
-			$object->label = empty($this->fields['label']['default']) ? $langs->trans("CopyOf")." ".$object->label : $this->fields['label']['default'];
-		}
-		if (property_exists($object, 'status')) {
-			$object->status = self::STATUS_DRAFT;
-		}
-		if (property_exists($object, 'date_creation')) {
-			$object->date_creation = dol_now();
-		}
-		if (property_exists($object, 'date_modification')) {
-			$object->date_modification = null;
-		}
-		// ...
-		// Clear extrafields that are unique
-		if (is_array($object->array_options) && count($object->array_options) > 0) {
-			$extrafields->fetch_name_optionals_label($this->table_element);
-			foreach ($object->array_options as $key => $option) {
-				$shortkey = preg_replace('/options_/', '', $key);
-				if (!empty($extrafields->attributes[$this->table_element]['unique'][$shortkey])) {
-					//var_dump($key);
-					//var_dump($clonedObj->array_options[$key]); exit;
-					unset($object->array_options[$key]);
-				}
-			}
-		}
-
-		// Create clone
-		$object->context['createfromclone'] = 'createfromclone';
-		$result = $object->createCommon($user);
-		if ($result < 0) {
-			$error++;
-			$this->setErrorsFromObject($object);
-		}
-
-		if (!$error) {
-			// copy internal contacts
-			if ($this->copy_linked_contact($object, 'internal') < 0) {
-				$error++;
-			}
-		}
-
-		if (!$error) {
-			// copy external contacts if same company
-			if (!empty($object->socid) && property_exists($this, 'fk_soc') && $this->fk_soc == $object->socid) {
-				if ($this->copy_linked_contact($object, 'external') < 0) {
-					$error++;
-				}
-			}
-		}
-
-		unset($object->context['createfromclone']);
-
-		// End
-		if (!$error) {
-			$this->db->commit();
-			return $object;
-		} else {
-			$this->db->rollback();
-			return -1;
-		}
-	}
-
-	/**
-	 * Initialise object with example values
-	 * Id must be 0 if object instance is a specimen
-	 *
-	 * @return int
-	 */
-	public function initAsSpecimen()
-	{
-		// Set here init that are not commonf fields
-		// $this->property1 = ...
-		// $this->property2 = ...
-
-		return $this->initAsSpecimenCommon();
-	}
-
-	/**
 	 * Load object lines in memory from the database
 	 *
 	 * @param	int		$noextrafields	0=Default to load extrafields, 1=No extrafields
@@ -475,23 +361,26 @@ class Licenseorder extends CommonObject
 	 * function add licenses for products with licenses assigned
 	 *
 	 * @param object $licenseKeylist $license source object
-	 * @param int $fk_license_order parent license order id
 	 * @param int $fk_license_product related product id
 	 * @param int $fk_commande_det related order line
 	 *
 	 * @return int create result NOK < 0 OK > 0
 	 */
-
-	public function addLine($user, $licenseKeylist, $fk_license_order, $fk_license_product, $fk_commande_det)
+	public function addLine($user, $licenseKeylist, $fk_license_product, $fk_commande_det)
 	{
 		$now=dol_now();
 		$licenseOrderDet = new Licenseorderdet($this->db);
-		$licenseOrderDet->fk_license_order = $fk_license_order;
+		$licenseOrderDet->fk_license_order = $this->id;
 		$licenseOrderDet->fk_license_product = $fk_license_product;
 		$licenseOrderDet->fk_commande_det = $fk_commande_det;
 		$licenseOrderDet->datec = $now;
 		$licenseOrderDet->datev = dol_time_plus_duree($now,$licenseKeylist->duration,$licenseKeylist->duration_unit);
-		return $licenseOrderDet->create($user);
+		$result = $licenseOrderDet->create($user);
+		if ($result > 0 && empty($this->date_valid)) {
+			$this->date_valid = $licenseOrderDet->datev;
+			$this->update($user);
+		}
+		return $result;
 	}
 
 	/**
@@ -517,7 +406,7 @@ class Licenseorder extends CommonObject
 	 *
 	 * @param User $user User who generates key
 	 * @param array $data assosiative array with license order detail data
-	 * @return string generated key
+	 * @return string|int generated key or < 0 if error
 	 */
 
 	public function generate($user, $data)
@@ -528,28 +417,75 @@ class Licenseorder extends CommonObject
 			if ($licenseKeylist->fetch($licenseProduct->fk_base_key) > 0) {
 				$licensenOrderDet = new Licenseorderdet($this->db);
 				if ($licensenOrderDet->fetch($data["rowid"]) > 0) {
-					if ($licensenOrderDet->license_key == '') {
-						if ($licenseKeylist->type == 0) {
-							$hashData = array($this->identification, $licenseProduct->option_code, $licenseKeylist->option_code);
-							$licensenOrderDet->license_key = $licenseKeylist->generate($hashData);
+					if ($licenseKeylist->type == 0) {
+						$hashData = array($this->identification, $licenseProduct->option_code, $licenseKeylist->option_code);
+						$licensenOrderDet->license_key = $licenseKeylist->generate($hashData);
+						if ($licensenOrderDet->update($user) > 0) {
+							return $licensenOrderDet->license_key;
+						}
+					} else {
+						$licenseList = new Licenselist($this->db);
+						if ($licenseList->fetchNext($licenseKeylist->id) > 0) {
+							$licensenOrderDet->license_key = $licenseList->external_key;
 							if ($licensenOrderDet->update($user) > 0) {
 								return $licensenOrderDet->license_key;
 							}
-						} else {
-							$licenseList = new Licenselist($this->db);
-							if ($licenseList->fetchNext($licenseKeylist->id) > 0) {
-								$licensenOrderDet->license_key = $licenseList->external_key;
-								if ($licensenOrderDet->update($user) > 0) {
-									return $licensenOrderDet->license_key;
-								}
+						}
+					}
+				} else {
+					$this->error = 'ErrorLicenseOrderDetNotFound';
+				}
+			} else {
+				$this->error = 'ErrorLicenseKeyNotFound';
+			}
+		} else {
+			$this->error = 'ErrorLicenseProductNotFound';
+		}
+		return -1;
+	}
+
+	/**
+	 * function to renew expired date for product license
+	 *
+	 * @param User $user User who renews key
+	 * @param array $data assosiative array with license order detail data
+	 * @return string|int > 0 if renewed or < 0 if error
+	 */
+
+	 public function renew($user, $data)
+	 {
+		$now = dol_now();
+		$licenseProduct = new Licenseproduct($this->db);
+		if ($licenseProduct->fetch($data['fk_license_product'], 0) > 0) {
+			$licenseKeylist = new Licensekeylist($this->db);
+			if ($licenseKeylist->fetch($licenseProduct->fk_base_key) > 0) {
+				$licenseOrderDet = new Licenseorderdet($this->db);
+				if ($licenseOrderDet->fetch($data["rowid"]) > 0) {
+					$licenseOrderDet->datev = dol_time_plus_duree($now,$licenseKeylist->duration,$licenseKeylist->duration_unit);
+					if ($licenseKeylist->type == 0) {
+						if ($licenseOrderDet->update($user) > 0) {
+							return $licenseOrderDet->license_key;
+						}
+					} else {
+						$licenseList = new Licenselist($this->db);
+						if ($licenseList->fetchNext($licenseKeylist->id) > 0) {
+							$licenseOrderDet->license_key = $licenseList->external_key;
+							if ($licenseOrderDet->update($user) > 0) {
+								return $licenseOrderDet->license_key;
 							}
 						}
 					}
-				}
-			}
-		}
-		return NULL;
-	}
+				 } else {
+					$this->error = 'ErrorLicenseOrderDetNotFound';
+				 }
+			 } else {
+				 $this->error = 'ErrorLicenseKeyNotFound';
+			 }
+		 } else {
+			 $this->error = 'ErrorLicenseProductNotFound';
+		 }
+		 return -1;
+	 }
 
 	/**
 	 * print license list
@@ -583,6 +519,8 @@ class Licenseorder extends CommonObject
 				print '<td align="center">'.dol_print_date($data['datec'],'daytext').'</td>';
 				//Date expire
 				print '<td align="center">'.dol_print_date($data['datev'],'daytext').'</td>';
+				//status
+				print '<td align="center">'.$this->getLibStatut(2).'</td>';
 				// print Licensekey when it is a single license else print 'multi'
 
 				if ($multiLicense->key_mode == 'multi')	{
@@ -645,118 +583,7 @@ class Licenseorder extends CommonObject
 			return 0;
 		}
 
-		/* if (! ((!getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('licensemanager', 'licenseorder', 'write'))
-		 || (getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('licensemanager', 'licenseorder_advance', 'validate')))
-		 {
-		 $this->error='NotEnoughPermissions';
-		 dol_syslog(get_class($this)."::valid ".$this->error, LOG_ERR);
-		 return -1;
-		 }*/
-
-		$now = dol_now();
-
-		$this->db->begin();
-
-		// Define new ref
-		if (!$error && (preg_match('/^[\(]?PROV/i', $this->ref) || empty($this->ref))) { // empty should not happened, but when it occurs, the test save life
-			$num = $this->getNextNumRef();
-		} else {
-			$num = $this->ref;
-		}
-		$this->newref = $num;
-
-		if (!empty($num)) {
-			// Validate
-			$sql = "UPDATE ".MAIN_DB_PREFIX.$this->table_element;
-			$sql .= " SET ";
-			if (!empty($this->fields['ref'])) {
-				$sql .= " ref = '".$this->db->escape($num)."',";
-			}
-			$sql .= " status = ".self::STATUS_VALIDATED;
-			if (!empty($this->fields['date_validation'])) {
-				$sql .= ", date_validation = '".$this->db->idate($now)."'";
-			}
-			if (!empty($this->fields['fk_user_valid'])) {
-				$sql .= ", fk_user_valid = ".((int) $user->id);
-			}
-			$sql .= " WHERE rowid = ".((int) $this->id);
-
-			dol_syslog(get_class($this)."::validate()", LOG_DEBUG);
-			$resql = $this->db->query($sql);
-			if (!$resql) {
-				dol_print_error($this->db);
-				$this->error = $this->db->lasterror();
-				$error++;
-			}
-
-			if (!$error && !$notrigger) {
-				// Call trigger
-				$result = $this->call_trigger('MYOBJECT_VALIDATE', $user);
-				if ($result < 0) {
-					$error++;
-				}
-				// End call triggers
-			}
-		}
-
-		if (!$error) {
-			$this->oldref = $this->ref;
-
-			// Rename directory if dir was a temporary ref
-			if (preg_match('/^[\(]?PROV/i', $this->ref)) {
-				// Now we rename also files into index
-				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filename = CONCAT('".$this->db->escape($this->newref)."', SUBSTR(filename, ".(strlen($this->ref) + 1).")), filepath = 'licenseorder/".$this->db->escape($this->newref)."'";
-				$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%' AND filepath = 'licenseorder/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
-				$resql = $this->db->query($sql);
-				if (!$resql) {
-					$error++;
-					$this->error = $this->db->lasterror();
-				}
-				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filepath = 'licenseorder/".$this->db->escape($this->newref)."'";
-				$sql .= " WHERE filepath = 'licenseorder/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
-				$resql = $this->db->query($sql);
-				if (!$resql) {
-					$error++;
-					$this->error = $this->db->lasterror();
-				}
-
-				// We rename directory ($this->ref = old ref, $num = new ref) in order not to lose the attachments
-				$oldref = dol_sanitizeFileName($this->ref);
-				$newref = dol_sanitizeFileName($num);
-				$dirsource = $conf->licensemanager->dir_output.'/licenseorder/'.$oldref;
-				$dirdest = $conf->licensemanager->dir_output.'/licenseorder/'.$newref;
-				if (!$error && file_exists($dirsource)) {
-					dol_syslog(get_class($this)."::validate() rename dir ".$dirsource." into ".$dirdest);
-
-					if (@rename($dirsource, $dirdest)) {
-						dol_syslog("Rename ok");
-						// Rename docs starting with $oldref with $newref
-						$listoffiles = dol_dir_list($conf->licensemanager->dir_output.'/licenseorder/'.$newref, 'files', 1, '^'.preg_quote($oldref, '/'));
-						foreach ($listoffiles as $fileentry) {
-							$dirsource = $fileentry['name'];
-							$dirdest = preg_replace('/^'.preg_quote($oldref, '/').'/', $newref, $dirsource);
-							$dirsource = $fileentry['path'].'/'.$dirsource;
-							$dirdest = $fileentry['path'].'/'.$dirdest;
-							@rename($dirsource, $dirdest);
-						}
-					}
-				}
-			}
-		}
-
-		// Set new ref and current status
-		if (!$error) {
-			$this->ref = $num;
-			$this->status = self::STATUS_VALIDATED;
-		}
-
-		if (!$error) {
-			$this->db->commit();
-			return 1;
-		} else {
-			$this->db->rollback();
-			return -1;
-		}
+		return $this->setStatusCommon($user, self::STATUS_VALIDATED, $notrigger, 'LICENSEMANAGER_LICENSEORDER_VALIDATE');
 	}
 
 
@@ -781,7 +608,7 @@ class Licenseorder extends CommonObject
 		 return -1;
 		 }*/
 
-		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'LICENSEMANAGER_MYOBJECT_UNVALIDATE');
+		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'LICENSEMANAGER_LICENSEORDER_UNVALIDATE');
 	}
 
 	/**
@@ -805,7 +632,7 @@ class Licenseorder extends CommonObject
 		 return -1;
 		 }*/
 
-		return $this->setStatusCommon($user, self::STATUS_CANCELED, $notrigger, 'LICENSEMANAGER_MYOBJECT_CANCEL');
+		return $this->setStatusCommon($user, self::STATUS_CANCELED, $notrigger, 'LICENSEMANAGER_LICENSEORDER_CANCEL');
 	}
 
 	/**
@@ -829,7 +656,7 @@ class Licenseorder extends CommonObject
 		 return -1;
 		 }*/
 
-		return $this->setStatusCommon($user, self::STATUS_VALIDATED, $notrigger, 'LICENSEMANAGER_MYOBJECT_REOPEN');
+		return $this->setStatusCommon($user, self::STATUS_VALIDATED, $notrigger, 'LICENSEMANAGER_LICENSEORDER_REOPEN');
 	}
 
 	/**
@@ -985,49 +812,6 @@ class Licenseorder extends CommonObject
 	}
 
 	/**
-	 *	Return a thumb for kanban views
-	 *
-	 *	@param      string	    $option                 Where point the link (0=> main card, 1,2 => shipment, 'nolink'=>No link)
-	 *  @param		array		$arraydata				Array of data
-	 *  @return		string								HTML Code for Kanban thumb.
-	 */
-	public function getKanbanView($option = '', $arraydata = null)
-	{
-		global $conf, $langs;
-
-		$selected = (empty($arraydata['selected']) ? 0 : $arraydata['selected']);
-
-		$return = '<div class="box-flex-item box-flex-grow-zero">';
-		$return .= '<div class="info-box info-box-sm">';
-		$return .= '<span class="info-box-icon bg-infobox-action">';
-		$return .= img_picto('', $this->picto);
-		$return .= '</span>';
-		$return .= '<div class="info-box-content">';
-		$return .= '<span class="info-box-ref inline-block tdoverflowmax150 valignmiddle">'.(method_exists($this, 'getNomUrl') ? $this->getNomUrl() : $this->ref).'</span>';
-		if ($selected >= 0) {
-			$return .= '<input id="cb'.$this->id.'" class="flat checkforselect fright" type="checkbox" name="toselect[]" value="'.$this->id.'"'.($selected ? ' checked="checked"' : '').'>';
-		}
-		if (property_exists($this, 'label')) {
-			$return .= ' <div class="inline-block opacitymedium valignmiddle tdoverflowmax100">'.$this->label.'</div>';
-		}
-		if (property_exists($this, 'thirdparty') && is_object($this->thirdparty)) {
-			$return .= '<br><div class="info-box-ref tdoverflowmax150">'.$this->thirdparty->getNomUrl(1).'</div>';
-		}
-		if (property_exists($this, 'amount')) {
-			$return .= '<br>';
-			$return .= '<span class="info-box-label amount">'.price($this->amount, 0, $langs, 1, -1, -1, $conf->currency).'</span>';
-		}
-		if (method_exists($this, 'getLibStatut')) {
-			$return .= '<br><div class="info-box-status">'.$this->getLibStatut(3).'</div>';
-		}
-		$return .= '</div>';
-		$return .= '</div>';
-		$return .= '</div>';
-
-		return $return;
-	}
-
-	/**
 	 *  Return the label of the status
 	 *
 	 *  @param  int		$mode          0=long label, 1=short label, 2=Picto + short label, 3=Picto, 4=Picto + long label, 5=Short label + Picto, 6=Long label + Picto
@@ -1085,136 +869,6 @@ class Licenseorder extends CommonObject
 	}
 
 	/**
-	 *	Load the info information in the object
-	 *
-	 *	@param  int		$id       Id of object
-	 *	@return	void
-	 */
-	public function info($id)
-	{
-		$sql = "SELECT rowid,";
-		$sql .= " date_creation as datec, tms as datem";
-		if (!empty($this->fields['date_validation'])) {
-			$sql .= ", date_validation as datev";
-		}
-		if (!empty($this->fields['fk_user_creat'])) {
-			$sql .= ", fk_user_creat";
-		}
-		if (!empty($this->fields['fk_user_modif'])) {
-			$sql .= ", fk_user_modif";
-		}
-		if (!empty($this->fields['fk_user_valid'])) {
-			$sql .= ", fk_user_valid";
-		}
-		$sql .= " FROM ".MAIN_DB_PREFIX.$this->table_element." as t";
-		$sql .= " WHERE t.rowid = ".((int) $id);
-
-		$result = $this->db->query($sql);
-		if ($result) {
-			if ($this->db->num_rows($result)) {
-				$obj = $this->db->fetch_object($result);
-
-				$this->id = $obj->rowid;
-
-				if (!empty($this->fields['fk_user_creat'])) {
-					$this->user_creation_id = $obj->fk_user_creat;
-				}
-				if (!empty($this->fields['fk_user_modif'])) {
-					$this->user_modification_id = $obj->fk_user_modif;
-				}
-				if (!empty($this->fields['fk_user_valid'])) {
-					$this->user_validation_id = $obj->fk_user_valid;
-				}
-				$this->date_creation     = $this->db->jdate($obj->datec);
-				$this->date_modification = empty($obj->datem) ? '' : $this->db->jdate($obj->datem);
-				if (!empty($obj->datev)) {
-					$this->date_validation   = empty($obj->datev) ? '' : $this->db->jdate($obj->datev);
-				}
-			}
-
-			$this->db->free($result);
-		} else {
-			dol_print_error($this->db);
-		}
-	}
-
-	/**
-	 * 	Create an array of lines
-	 *
-	 * 	@return array|int		array of lines if OK, <0 if KO
-	 */
-	public function getLinesArray()
-	{
-		$this->lines = array();
-
-		$objectline = new Licenseorderdet($this->db);
-		$result = $objectline->fetchAll('ASC', 'position', 0, 0, '(fk_licenseorder:=:'.((int) $this->id).')');
-
-		if (is_numeric($result)) {
-			$this->setErrorsFromObject($objectline);
-			return $result;
-		} else {
-			$this->lines = $result;
-			return $this->lines;
-		}
-	}
-
-	/**
-	 *  Returns the reference to the following non used object depending on the active numbering module.
-	 *
-	 *  @return string      		Object free reference
-	 */
-	public function getNextNumRef()
-	{
-		global $langs, $conf;
-		$langs->load("licensemanager@licensemanager");
-
-		if (!getDolGlobalString('LICENSEMANAGER_MYOBJECT_ADDON')) {
-			$conf->global->LICENSEMANAGER_MYOBJECT_ADDON = 'mod_licenseorder_standard';
-		}
-
-		if (getDolGlobalString('LICENSEMANAGER_MYOBJECT_ADDON')) {
-			$mybool = false;
-
-			$file = getDolGlobalString('LICENSEMANAGER_MYOBJECT_ADDON').".php";
-			$classname = getDolGlobalString('LICENSEMANAGER_MYOBJECT_ADDON');
-
-			// Include file with class
-			$dirmodels = array_merge(array('/'), (array) $conf->modules_parts['models']);
-			foreach ($dirmodels as $reldir) {
-				$dir = dol_buildpath($reldir."core/modules/licensemanager/");
-
-				// Load file with numbering class (if found)
-				$mybool |= @include_once $dir.$file;
-			}
-
-			if ($mybool === false) {
-				dol_print_error(null, "Failed to include file ".$file);
-				return '';
-			}
-
-			if (class_exists($classname)) {
-				$obj = new $classname();
-				$numref = $obj->getNextValue($this);
-
-				if ($numref != '' && $numref != '-1') {
-					return $numref;
-				} else {
-					$this->error = $obj->error;
-					//dol_print_error($this->db,get_class($this)."::getNextNumRef ".$obj->error);
-					return "";
-				}
-			} else {
-				print $langs->trans("Error")." ".$langs->trans("ClassNotFound").' '.$classname;
-				return "";
-			}
-		} else {
-			print $langs->trans("ErrorNumberingModuleNotSetup", $this->element);
-			return "";
-		}
-	}
-
-	/**
 	 *  Create a document onto disk according to template module.
 	 *
 	 *  @param	    string		$modele			Force template to use ('' to not force)
@@ -1239,8 +893,8 @@ class Licenseorder extends CommonObject
 
 			if (!empty($this->model_pdf)) {
 				$modele = $this->model_pdf;
-			} elseif (getDolGlobalString('MYOBJECT_ADDON_PDF')) {
-				$modele = getDolGlobalString('MYOBJECT_ADDON_PDF');
+			} elseif (getDolGlobalString('LICENSEORDER_ADDON_PDF')) {
+				$modele = getDolGlobalString('LICENSEORDER_ADDON_PDF');
 			}
 		}
 

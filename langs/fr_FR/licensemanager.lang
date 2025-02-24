@@ -56,3 +56,6 @@ MultiLicense = Licence multiple
 ConfirmDeleteLicense = Confirmez la suppression du licence
 GenerateLicense = Générer Licence
 GenerateLicenseDoc = Générer Document
+Renewed = Licence renouvelé
+RenewLicense = Renouveler licence
+CancelLicense = De-activer lincece

@@ -56,3 +56,6 @@ MultiLicense = Meervoudige licentie
 ConfirmDeleteLicense = Bevestig licentie verwijdering
 GenerateLicense = Genereer Licentie
 GenerateLicenseDoc = Genereer Document
+Renewed = Licentie vernieuwd
+RenewLicense = Licentie vernieuwen
+CancelLicense = Licentie de-activeren

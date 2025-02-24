@@ -205,7 +205,7 @@ class InterfaceLicenseManagerTriggers extends DolibarrTriggers
 								if (($result > 0) && ($licenseOrder->id > 0) && ($licenseOrder->key_mode == $licenseKeylist->mode)
 								) {
 									// only add licenses of same mode to license order (single or multi)
-									if ($licenseOrder->addLine($user, $licenseKeylist, $licenseOrder->id, $licenseProduct->id, $object->rowid) > 0) {
+									if ($licenseOrder->addLine($user, $licenseKeylist, $licenseProduct->id, $object->rowid) > 0) {
 										dol_syslog("Trigger '" . $this->name . "' for action '$action' for product id=" . $licenseProduct->fk_product);
 									}
 								} else {
@@ -217,7 +217,7 @@ class InterfaceLicenseManagerTriggers extends DolibarrTriggers
 									$licenseOrder->key_mode = $licenseKeylist->mode;
 									$licenseOrder->qty_seq_id = $i;
 									if ($licenseOrder->create($user) > 0) {
-										if ($licenseOrder->addLine($user, $licenseKeylist, $licenseOrder->id, $licenseProduct->id, $object->rowid) > 0) {
+										if ($licenseOrder->addLine($user, $licenseKeylist, $licenseProduct->id, $object->rowid) > 0) {
 											dol_syslog("Trigger '" . $this->name . "' for action '$action' for product id=" . $licenseProduct->fk_product);
 										}
 									}
