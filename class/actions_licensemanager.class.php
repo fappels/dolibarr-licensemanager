@@ -270,7 +270,7 @@ class ActionsLicenseManager extends CommonHookActions
 
 		if (in_array($parameters['currentcontext'], array('orderlist'))) {
 			if ($user->rights->licensemanager->licensemanager->read) {
-				$this->resprints = ", lo.note as license_note, lo.identification, lo.date_valid as license_date_valid";
+				$this->resprints = ", lo.note as license_note, lo.identification, lo.date_valid as license_date_valid, lo.status as license_status";
 			}
 		}
 
@@ -282,7 +282,7 @@ class ActionsLicenseManager extends CommonHookActions
 		}
 	}
 
-		/**
+	/**
 	 * Overloading the printFieldListFrom function : replacing the parent's function with the one below
 	 *
 	 * @param   array           $parameters     Hook metadatas (context, etc...)
@@ -329,6 +329,39 @@ class ActionsLicenseManager extends CommonHookActions
 	}
 
 	/**
+	 * Overloading the printFieldListSearchParam function : replacing the parent's function with the one below
+	 *
+	 * @param   array           $parameters     Hook metadatas (context, etc...)
+	 * @param   CommonObject    $object         The object to process (an invoice if you are in invoice module, a propale in propale's module, etc...)
+	 * @param   string          $action         Current action (if set). Generally create or edit or null
+	 * @param   HookManager     $hookmanager    Hook manager propagated to allow calling another hook
+	 * @return  int                             < 0 on error, 0 on success, 1 to replace standard code
+	 */
+	public function printFieldListSearchParam($parameters, &$object, &$action, $hookmanager)
+	{
+		global $user;
+
+		$error = 0; // Error counter
+
+		/* for future dolibarr when product list has this */
+		if (in_array($parameters['currentcontext'], array('orderlist'))) {
+			if ($user->rights->licensemanager->licensemanager->read) {
+				$param = "&search_license_note=" . GETPOST('search_license_note', 'alpha');
+				$param .= "&search_identification=" . GETPOST('search_identification', 'alpha');
+				$param .= "&search_license_status=" . GETPOST('search_license_status', 'int');
+				$this->resprints = $param;
+			}
+		}
+
+		if (! $error) {
+			return 0;
+		} else {
+			$this->errors[] = 'Error message';
+			return -1;
+		}
+	}
+
+	/**
 	 * Overloading the printFieldListSelect function : replacing the parent's function with the one below
 	 *
 	 * @param   array           $parameters     Hook metadatas (context, etc...)
@@ -348,11 +381,15 @@ class ActionsLicenseManager extends CommonHookActions
 			if ($user->rights->licensemanager->licensemanager->read) {
 				$search_license_note = GETPOST('search_license_note', 'alpha');
 				if ($search_license_note != '') {
-					$this->resprints .= natural_search('license_note', $search_license_note, 1);
+					$this->resprints .= natural_search('lo.note', $search_license_note);
 				}
 				$search_identification = GETPOST('search_identification', 'alpha');
-				if ($search_license_note != '') {
-					$this->resprints .= natural_search('identification', $search_identification, 1);
+				if ($search_identification != '') {
+					$this->resprints .= natural_search('lo.identification', $search_identification);
+				}
+				$search_status = GETPOST('search_license_status', 'int');
+				if ($search_status != '') {
+					$this->resprints .= natural_search('lo.status', $search_status, 1);
 				}
 			}
 		}
@@ -376,13 +413,14 @@ class ActionsLicenseManager extends CommonHookActions
 	 */
 	public function printFieldListOption($parameters, &$object, &$action, $hookmanager)
 	{
-		global $conf, $user;
+		global $langs, $user, $form;
 
 		$error = 0; // Error counter
 		$this->resprints = '';
 
 		if (in_array($parameters['currentcontext'], array('orderlist'))) {
 			if ($user->rights->licensemanager->licensemanager->read) {
+				dol_include_once('/licensemanager/class/licenseorder.class.php');
 				$search_license_note = GETPOST('search_license_note', 'alpha');
 				$this->resprints .= '<td class="liste_titre right">';
 				$this->resprints .= '<input class="flat" type="text" size="4" name="search_license_note" value="'.$search_license_note.'">';
@@ -392,6 +430,15 @@ class ActionsLicenseManager extends CommonHookActions
 				$this->resprints .= '<input class="flat" type="text" size="4" name="search_identification" value="'.$search_identification.'">';
 				$this->resprints .= '</td>';
 				$this->resprints .= '<td class="liste_titre right">';
+				$this->resprints .= '</td>';
+				$search_status = GETPOST('search_license_status', 'alpha');
+				$this->resprints .= '<td class="liste_titre right">';
+				$liststatus = array(
+					Licenseorder::STATUS_DRAFT => $langs->trans("Draft"),
+					Licenseorder::STATUS_VALIDATED => $langs->trans("Validated"),
+					Licenseorder::STATUS_CANCELED => $langs->trans("Cancelled")
+				);
+				$this->resprints .= $form->selectarray('search_license_status', $liststatus, $search_status, -3, 0, 0, '', 0, 0, 0, '', 'search_status width100 onrightofpage');
 				$this->resprints .= '</td>';
 			}
 		}
@@ -422,12 +469,14 @@ class ActionsLicenseManager extends CommonHookActions
 
 		if (in_array($parameters['currentcontext'], array('orderlist'))) {
 			if ($user->rights->licensemanager->licensemanager->read) {
+				$langs->load('licensemanager@licensemanager');
 				$sortfield = $parameters['sortfield'];
 				$sortorder = $parameters['sortorder'];
 				$param = $parameters['param'];
 				$this->resprints .= getTitleFieldOfList($langs->trans('LicenseNote'), 0, $_SERVER["PHP_SELF"], 'license_note', '', $param, '', $sortfield, $sortorder, 'right ');
-				$this->resprints .= getTitleFieldOfList($langs->trans('Identifiation'), 0, $_SERVER["PHP_SELF"], 'identification', '', $param, '', $sortfield, $sortorder, 'right ');
+				$this->resprints .= getTitleFieldOfList($langs->trans('LicenseIdentification'), 0, $_SERVER["PHP_SELF"], 'identification', '', $param, '', $sortfield, $sortorder, 'right ');
 				$this->resprints .= getTitleFieldOfList($langs->trans('DateValid'), 0, $_SERVER["PHP_SELF"], 'license_date_valid', '', $param, '', $sortfield, $sortorder, 'right ');
+				$this->resprints .= getTitleFieldOfList($langs->trans('Status'), 0, $_SERVER["PHP_SELF"], 'license_status', '', $param, '', $sortfield, $sortorder, 'right ');
 			}
 		}
 
@@ -457,6 +506,7 @@ class ActionsLicenseManager extends CommonHookActions
 
 		if (in_array($parameters['currentcontext'], array('orderlist'))) {
 			if ($user->rights->licensemanager->licensemanager->read) {
+				dol_include_once('/licensemanager/class/licenseorder.class.php');
 				$obj = $parameters['obj'];
 				$this->resprints .= '<td class="right">'.$obj->license_note.'</td>';
 				$this->resprints .= '<td class="right">'.$obj->identification.'</td>';
@@ -469,6 +519,8 @@ class ActionsLicenseManager extends CommonHookActions
 					$this->resprints .= dol_print_date($date_valid);
 				}
 				$this->resprints .= '</td>';
+				$licenseOrder = new Licenseorder($this->db);
+				$this->resprints .= '<td class="right">'.$licenseOrder->libStatut($obj->license_status, 2).'</td>';
 			}
 		}
 

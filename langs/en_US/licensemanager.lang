@@ -59,3 +59,4 @@ GenerateLicenseDoc = Generate Document
 Renewed = License Renewed
 RenewLicense = Renew license
 CancelLicense = De-activate lincese
+DateValid = Valid until
