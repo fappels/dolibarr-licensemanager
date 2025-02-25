@@ -84,13 +84,13 @@ if (strstr($action, 'set')) {
 	$licenseOrder = new Licenseorder($db);
 	if ($licenseOrder->fetch($actionDet[2], 0, 0) > 0) {
 		if ($actionDet[1] == 'identification') {
-			$licenseOrder->identification = $_POST['identification'];
+			$licenseOrder->identification = GETPOST('identification', 'alpha');
 			$result = $licenseOrder->update($user);
 		} elseif ($actionDet[1] == 'note') {
-			$licenseOrder->note = $_POST['note'];
+			$licenseOrder->note = GETPOST('note', 'alpha');
 			$result = $licenseOrder->update($user);
 		} elseif ($actionDet[1] == 'outputmode') {
-			$licenseOrder->output_mode = $_POST['output_mode'];
+			$licenseOrder->output_mode = GETPOST('output_mode', 'alpha');
 			$result = $licenseOrder->update($user);
 		}
 	}
