@@ -476,7 +476,7 @@ class ActionsLicenseManager extends CommonHookActions
 				$this->resprints .= getTitleFieldOfList($langs->trans('LicenseNote'), 0, $_SERVER["PHP_SELF"], 'license_note', '', $param, '', $sortfield, $sortorder, 'right ');
 				$this->resprints .= getTitleFieldOfList($langs->trans('LicenseIdentification'), 0, $_SERVER["PHP_SELF"], 'identification', '', $param, '', $sortfield, $sortorder, 'right ');
 				$this->resprints .= getTitleFieldOfList($langs->trans('DateValid'), 0, $_SERVER["PHP_SELF"], 'license_date_valid', '', $param, '', $sortfield, $sortorder, 'right ');
-				$this->resprints .= getTitleFieldOfList($langs->trans('Status'), 0, $_SERVER["PHP_SELF"], 'license_status', '', $param, '', $sortfield, $sortorder, 'right ');
+				$this->resprints .= getTitleFieldOfList($langs->trans('LicenseStatus'), 0, $_SERVER["PHP_SELF"], 'license_status', '', $param, '', $sortfield, $sortorder, 'right ');
 			}
 		}
 
