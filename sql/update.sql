@@ -18,4 +18,4 @@ ALTER TABLE llx_license_order ADD COLUMN date_valid date NULL;
 ALTER TABLE llx_license_order ADD COLUMN status integer NOT NULL DEFAULT 0;
 UPDATE llx_license_order los set date_creation = (select MAX(lod.datec) FROM llx_license_orderdet lod WHERE lod.fk_license_order = los.rowid);
 UPDATE llx_license_order los set date_valid = (select MAX(lod.datev) from llx_license_orderdet lod WHERE lod.fk_license_order = los.rowid);
-UPDATE llx_license_order los set status = 1 where date_valid NOT NULL;
+UPDATE llx_license_order los set status = 1 where date_valid IS NOT NULL;
