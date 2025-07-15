@@ -49,7 +49,7 @@ class InterfaceLicenseManagerTriggers extends DolibarrTriggers
 		parent::__construct($db);
 		$this->family = "products";
 		$this->description = "LicenseManager triggers.";
-		$this->version = self::VERSIONS['dev'];
+		$this->version = '1.0.5';            // 'development', 'experimental', 'dolibarr' or version
 		$this->picto = 'licensemanager@licensemanager';
 	}
 

@@ -61,3 +61,6 @@ RenewLicense = Renew license
 CancelLicense = De-activate lincese
 DateValid = Valid until
 LicenseStatus = License status
+Active = Active
+Expired = Expired
+LicenseDoc = License document
