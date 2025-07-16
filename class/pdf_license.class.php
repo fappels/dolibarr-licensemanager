@@ -203,23 +203,24 @@ class pdf_license extends CommonDocGenerator
 					{
 						foreach ($licenseOrderDetList->dataset as $detData)
 						{
+							$detData['status'] = $data['status'];
 							$nexY = $this->_licenseDetail($pdf,$detData,$license,30,$nexY,$outputlangs);
 						}
 					}
+
 					$otherLicenseOrders = new Licenseorder($this->_db);
-					$licenseIdentification=$data['identification'];
-					if ($otherLicenseOrders->fetchList("fk_customer = $order->socid AND identification = '$licenseIdentification'") > 0)
+					if ($otherLicenseOrders->fetchList("fk_customer = $order->socid AND identification = '".$data['identification']."'") > 0)
 					{
 						foreach ($otherLicenseOrders->dataset as $otherData)
 						{
 							$otherLicenOrderId = $otherData['rowid'];
-							if ($otherLicenOrderId < $data['rowid'])
-							{
+							if ($otherLicenOrderId < $data['rowid']) {
 								$otherLicenseOrdersDet = new Licenseorderdet($this->_db);
 								if ($otherLicenseOrdersDet->fetchList("fk_license_order = $otherLicenOrderId") > 0)
 								{
 									foreach ($otherLicenseOrdersDet->dataset as $detData)
 									{
+										$detData['status'] = $otherData['status'];
 										$nexY = $this->_licenseDetail($pdf,$detData,$license,30,$nexY,$outputlangs);
 									}
 								}
@@ -229,6 +230,7 @@ class pdf_license extends CommonDocGenerator
 
 					if ($license->key_mode == 'multi')
 					{
+						// print multi license
 						$nexY+=$this->_license($pdf,$license,30,$nexY,$outputlangs);
 					}
 
@@ -512,8 +514,8 @@ class pdf_license extends CommonDocGenerator
 	 * print license list
 	 *
 	 * @param PDF			&$pdf     			PDF
-	 * @param string $data licenseorderdet data
-	 * @param string &$license license reference to append multi licenses into
+	 * @param array $data licenseorderdet data
+	 * @param License &$license license reference to append multi licenses into
 	 * @param int $x x position
 	 * @param int $y y position
 	 * @param	Translate	$outputlangs		Object lang for output
@@ -540,21 +542,28 @@ class pdf_license extends CommonDocGenerator
 				$pdf->writeHTMLCell(150, 3, $x, $y, $outputlangs->convToOutputCharset($licenseBuy), 1, 1);
 				$y=$pdf->getY();
 				//Date expire
-				$licenseExpire = '<table><tr><td><b>'.$outputlangs->trans('LicenseExpire').'</b></td><td colspan="2">'.dol_print_date($data['datev'],'daytext').'</td></tr></table>';
+				if ($data['status'] == Licenseorder::STATUS_CANCELED) {
+					// print expired license
+					$licenseExpire = '<table><tr><td><b>'.$outputlangs->trans('LicenseExpired').'</b></td><td colspan="2">'.dol_print_date($data['datev'],'daytext').'</td></tr></table>';
+				} elseif ($data['status'] == Licenseorder::STATUS_DRAFT) {
+					// print draft license
+					$licenseExpire = '<table><tr><td><b>'.$outputlangs->trans('LicenseDraft').'</b></td><td colspan="2">'.dol_print_date($data['datev'],'daytext').'</td></tr></table>';
+				} else {
+					$licenseExpire = '<table><tr><td><b>'.$outputlangs->trans('LicenseExpire').'</b></td><td colspan="2">'.dol_print_date($data['datev'],'daytext').'</td></tr></table>';
+				}
 				$pdf->writeHTMLCell(150, 3, $x, $y, $outputlangs->convToOutputCharset($licenseExpire), 1, 1);
 				$y=$pdf->getY();
 
 				// print Licensekey when it is a single license else append license
 
-				if ($license->key_mode == 'multi')
-				{
-					if ($license->code) $license->code .= $licenseKeylist->multi_key_separator;
-					$license->code .= $data['license_key'];
-				}
-				else
-				{
+				if ($license->key_mode == 'multi') {
+					if ($data['status'] == Licenseorder::STATUS_VALIDATED) {
+						if ($license->code) $license->code .= $licenseKeylist->multi_key_separator;
+						$license->code .= $data['license_key'];
+					}
+				} else {
 					$license->code = $data['license_key'];
-					$y+=$this->_license($pdf, $license, $x, $y,$outputlangs);;
+					$y+=$this->_license($pdf, $license, $x, $y,$outputlangs);
 				}
 			}
 		}
