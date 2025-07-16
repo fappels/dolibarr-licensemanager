@@ -568,14 +568,16 @@ class ActionsLicenseManager extends CommonHookActions
 				$this->resprints .= '<td class="right">'.$obj->license_note.'</td>';
 				$licenseOrder = new Licenseorder($this->db);
 				$this->resprints .= '<td class="right">'.$licenseOrder->libStatut($obj->license_status, 2).'</td>';
-				// Download link
-				$order = new Commande($this->db);
-				$element = $order->element;
-				$this->resprints .= '<td class="nowraponall" data-label="' . $langs->trans('File') . '">';
-				$filename = dol_sanitizeFileName($obj->ref);
-				$filedir = $conf->{$element}->multidir_output[$obj->element_entity] . '/' . dol_sanitizeFileName($obj->ref);
-				$this->resprints .= $form->getDocumentsLink($element, $filename, $filedir, '_', '', 1);
-				$this->resprints .= '</td>';
+				if (in_array($parameters['currentcontext'], array('webportalpage'))) {
+					// Download link
+					$order = new Commande($this->db);
+					$element = $order->element;
+					$this->resprints .= '<td class="nowraponall" data-label="' . $langs->trans('File') . '">';
+					$filename = dol_sanitizeFileName($obj->ref);
+					$filedir = $conf->{$element}->multidir_output[$obj->element_entity] . '/' . dol_sanitizeFileName($obj->ref);
+					$this->resprints .= $form->getDocumentsLink($element, $filename, $filedir, '_', '', 1);
+					$this->resprints .= '</td>';
+				}
 			}
 		}
 

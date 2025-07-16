@@ -61,6 +61,7 @@ $langs->load("licensemanager@licensemanager");
 $error = 0;
 // Get parameters
 $id			= GETPOST('id', 'int');
+$licenseid	= GETPOST('licenseid', 'int'); // For single license
 $ref		= GETPOST('ref', 'alpha');
 $action		= GETPOST('action', 'alpha');
 $actionDet  = array();
@@ -71,7 +72,18 @@ if ($user->societe_id > 0) {
 	accessforbidden();
 }
 
+$order = new Commande($db);
+if ($id > 0 || ! empty($ref)) {
+	if ($order->fetch($id, $ref) <= 0) {
+		$mesg = '<font class="error">' . $langs->trans("Error") . 'Order not found'  . '</font>';
+		$action = '';
+	}
+} else {
+	$mesg = '<font class="error">' . $langs->trans("Error") . 'No order'  . '</font>';
+	$action = '';
+}
 
+$canceled = false;
 
 /*******************************************************************
  * ACTIONS
@@ -106,102 +118,127 @@ if (strstr($action, 'set')) {
 	}
 } elseif ($action == 'generate_licenses') {
 	// generate licenses
-	$order = new Commande($db);
-	if ($order->fetch($id) > 0) {
-		$licenseOrder = new Licenseorder($db);
-		if ($licenseOrder->fetchList("fk_commande = $order->id", '') > 0) {
-			foreach ($licenseOrder->dataset as $licenseOrderData) {
-				$licenseOrderDet = new Licenseorderdet($db);
-				$currentLicenseOrder = new Licenseorder($db);
-				$generated = false;
+	$licenseOrder = new Licenseorder($db);
+	if ($licenseOrder->fetchList("fk_commande = $order->id", '') > 0) {
+		foreach ($licenseOrder->dataset as $licenseOrderData) {
+			$licenseOrderDet = new Licenseorderdet($db);
+			$currentLicenseOrder = new Licenseorder($db);
+			$generated = false;
 
-				if ($licenseOrderData['identification'] != '') {
-					if (($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) && ($licenseOrderDet->fetchList("fk_license_order = $currentLicenseOrder->id") > 0)) {
-						foreach ($licenseOrderDet->dataset as $data) {
-							$key = $currentLicenseOrder->generate($user, $data);
-							if (is_string($key)) {
-								$db->commit();
-								$generated = true;
-							} else {
-								$db->rollback();
-								$generated = false;
-								$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $langs->trans($currentLicenseOrder->error) . '</font>';
-								break;
-							}
-						}
-						if ($generated) {
-							$mesg = '<font class="ok">' . $langs->trans("Generated") . '</font>';
-							$currentLicenseOrder->validate($user);
+			if ($licenseOrderData['identification'] != '') {
+				if (($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) && ($licenseOrderDet->fetchList("fk_license_order = $currentLicenseOrder->id") > 0)) {
+					foreach ($licenseOrderDet->dataset as $data) {
+						$key = $currentLicenseOrder->generate($user, $data);
+						if (is_string($key)) {
+							$db->commit();
+							$generated = true;
+						} else {
+							$db->rollback();
+							$generated = false;
+							$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $langs->trans($currentLicenseOrder->error) . '</font>';
+							break;
 						}
 					}
-				} else {
-					$mesg = '<font class="error">' . $langs->trans("MissingIdentification") . '</font>';
-					break;
+					if ($generated) {
+						$mesg = '<font class="ok">' . $langs->trans("Generated") . '</font>';
+						$currentLicenseOrder->validate($user);
+					}
 				}
+			} else {
+				$mesg = '<font class="error">' . $langs->trans("MissingIdentification") . '</font>';
+				break;
 			}
 		}
 	}
 } elseif ($action == 'renew_licenses') {
 	// Renew licenses
-	$order = new Commande($db);
-	if ($order->fetch($id) > 0) {
-		$licenseOrder = new Licenseorder($db);
-		if ($licenseOrder->fetchList("fk_commande = $order->id", '') > 0) {
-			foreach ($licenseOrder->dataset as $licenseOrderData) {
-				$licenseOrderDet = new Licenseorderdet($db);
-				$currentLicenseOrder = new Licenseorder($db);
-				$renewed = false;
+	$licenseOrder = new Licenseorder($db);
+	if ($licenseOrder->fetchList("fk_commande = $order->id", '') > 0) {
+		foreach ($licenseOrder->dataset as $licenseOrderData) {
+			$licenseOrderDet = new Licenseorderdet($db);
+			$currentLicenseOrder = new Licenseorder($db);
+			$renewed = false;
 
-				if (($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) && ($licenseOrderDet->fetchList("fk_license_order = $currentLicenseOrder->id") > 0)) {
-					foreach ($licenseOrderDet->dataset as $data) {
-						$key = $currentLicenseOrder->renew($user, $data);
-						if (is_string($key)) {
-							$db->commit();
-							$renewed = true;
-						} else {
-							$db->rollback();
-							$renewed = false;
-							$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $langs->trans($currentLicenseOrder->error) . '</font>';
-							break;
-						}
+			if (($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) && ($licenseOrderDet->fetchList("fk_license_order = $currentLicenseOrder->id") > 0)) {
+				foreach ($licenseOrderDet->dataset as $data) {
+					$key = $currentLicenseOrder->renew($user, $data);
+					if (is_string($key)) {
+						$db->commit();
+						$renewed = true;
+					} else {
+						$db->rollback();
+						$renewed = false;
+						$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $langs->trans($currentLicenseOrder->error) . '</font>';
+						break;
 					}
-					if ($renewed) {
-						$mesg = '<font class="ok">' . $langs->trans("Renewed") . '</font>';
-					}
+				}
+				if ($renewed) {
+					$mesg = '<font class="ok">' . $langs->trans("Renewed") . '</font>';
 				}
 			}
 		}
 	}
 } elseif ($action == 'cancel_licenses') {
-	// Renew licenses
-	$order = new Commande($db);
-	if ($order->fetch($id) > 0) {
-		$licenseOrder = new Licenseorder($db);
-		if ($licenseOrder->fetchList("fk_commande = $order->id", '') > 0) {
-			foreach ($licenseOrder->dataset as $licenseOrderData) {
-				$currentLicenseOrder = new Licenseorder($db);
+	// de-activate licenses
+	$orderRefs = array();
 
-				if ($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) {
-					$result = $currentLicenseOrder->cancel($user);
-					if ($result > 0) {
-						$mesg = '<font class="ok">' . $langs->trans("Canceled") . '</font>';
+	$licenseOrder = new Licenseorder($db);
+	if ($licenseOrder->fetchList("fk_commande = $order->id", '') > 0) {
+		$orderRefs[] = $order->ref;
+		foreach ($licenseOrder->dataset as $licenseOrderData) {
+			$currentLicenseOrder = new Licenseorder($db);
+
+			if ($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) {
+
+				$result = $currentLicenseOrder->cancel($user);
+				if ($result > 0) {
+					$canceled = true;
+					$otherOrder = new Commande($db);
+					if ($otherOrder->fetch($currentLicenseOrder->fk_commande) > 0) {
+						if (!in_array($otherOrder->ref, $orderRefs)) {
+							$orderRefs[] = $otherOrder->ref;
+							$orderRef = $otherOrder->ref;
+						} else {
+							$orderRef = $order->ref;
+						}
 					}
+					$mesg = '<font class="ok">' . $langs->trans("LicenseForOrderCanceled", implode(",", $orderRefs)) . '</font>';
+				} else {
+					$mesg = '<font class="error">' . $langs->trans('Error') . ' ' . $langs->trans('AlreadyCanceled') . '</font>';
 				}
 			}
 		}
 	}
-} elseif ($action == 'generate_doc') {
-	// generate document
-	$order = new Commande($db);
-	if ($order->fetch($id) > 0) {
-		$licenseOrderList = new Licenseorder($db);
-		if ($licenseOrderList->fetchList("fk_commande = $order->id", '') > 0) {
-			$pdfLicense = new pdf_license($db);
-			if ($pdfLicense->write_file($order, $langs) > 0) {
-				$mesg = '<font class="ok">' . $langs->trans("Generated") . '</font>';
+} elseif ($action == 'cancel_license') {
+	// de-activate license
+	$currentLicenseOrder = new Licenseorder($db);
+
+	if ($currentLicenseOrder->fetch($licenseid, 0, 0) > 0) {
+		$result = $currentLicenseOrder->cancel($user);
+
+		if ($result > 0) {
+			$canceled = true;
+			$otherOrder = new Commande($db);
+			if ($otherOrder->fetch($currentLicenseOrder->fk_commande) > 0) {
+				$orderRef = $otherOrder->ref;
 			} else {
-				$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $action . '</font>';
+				$orderRef = '';
 			}
+			$mesg = '<font class="ok">' . $langs->trans("LicenseForOrderCanceled", $orderRef) . '</font>';
+		} else {
+			$mesg = '<font class="error">' . $langs->trans('Error') . ' ' . $langs->trans('AlreadyCanceled') . '</font>';
+		}
+	}
+}
+if ($action == 'generate_doc' || $canceled) {
+	// generate document
+	$licenseOrderList = new Licenseorder($db);
+	if ($licenseOrderList->fetchList("fk_commande = $order->id", '') > 0) {
+		$pdfLicense = new pdf_license($db);
+		if ($pdfLicense->write_file($order, $langs) > 0) {
+			$mesg = '<font class="ok">' . $langs->trans("Generated") . '</font>';
+		} else {
+			$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $action . '</font>';
 		}
 	}
 }
@@ -218,225 +255,226 @@ $form = new Form($db);
 
 
 // Put here content of your page
-if ($id > 0 || ! empty($ref)) {
-	$commande = new Commande($db);
-	$licenseModes = array();
 
-	if ($commande->fetch($id, $ref) > 0) {
+$licenseModes = array();
 
-		$soc = new Societe($db);
-		$soc->fetch($commande->socid);
 
-		$licenseOrder = new Licenseorder($db);
-		$multiLicense = new License();
 
-		$author = new User($db);
-		$author->fetch($commande->user_author_id);
+$soc = new Societe($db);
+$soc->fetch($order->socid);
 
-		$head = commande_prepare_head($commande);
-		print dol_get_fiche_head($head, 'licenseorder', $langs->trans("CustomerOrder"), 0, 'order');
+$licenseOrder = new Licenseorder($db);
+$multiLicense = new License();
 
+$author = new User($db);
+$author->fetch($order->user_author_id);
+
+$head = commande_prepare_head($order);
+print dol_get_fiche_head($head, 'licenseorder', $langs->trans("CustomerOrder"), 0, 'order');
+
+print '<table class="border" width="100%">';
+
+// Ref
+print '<tr><td width="18%">' . $langs->trans('Ref') . '</td>';
+print '<td colspan="3">';
+print $form->showrefnav($order, 'ref', '', 1, 'ref', 'ref');
+print '</td>';
+print '</tr>';
+
+if ($licenseOrder->fetchList("fk_commande = $order->id", '') > 0) {
+	$licenseOrderCount = count($licenseOrder->dataset);
+	// Ref commande client
+	print '<tr><td width="18%">';
+	print $langs->trans('RefCustomer') . '</td>';
+	print '<td colspan="2">' . $order->ref_client;
+	print '</td>';
+
+	// Third party
+	print '<tr><td>' . $langs->trans('Company') . '</td>';
+	print '<td colspan="3">' . $soc->getNomUrl(1) . '</td>';
+	print '</tr>';
+
+	// Date
+	print '<tr><td>' . $langs->trans('Date') . '</td>';
+	print '<td colspan="3">' . dol_print_date($order->date, 'daytext') . '</td>';
+	print '</tr>';
+
+	// Licenses qty
+	print '<tr><td>' . $langs->trans('Licenses') . '</td>';
+	print '<td colspan="3">' . $licenseOrderCount . '</td>';
+	print '</tr>';
+} else {
+	// no product with license
+	print '<tr><td width="18%">' . $langs->trans('License') . '</td>';
+	print '<td colspan="3">';
+	print $langs->trans('NoProductWithLicense');
+	print '</td>';
+	print '</tr>';
+}
+
+
+print '</table><br>';
+
+
+/**
+ *  license Orders grouped by license order
+ *
+ */
+if ($licenseOrderCount > 0) {
+	foreach ($licenseOrder->dataset as $licenseOrderData) {
 		print '<table class="border" width="100%">';
+		// License Identification
+		print '<tr><td height="10" width="20%">';
+		print '<table class="nobordernopadding" width="100%"><tr><td>';
+		print $langs->trans('LicenseIdentification');
+		print '</td>';
 
-		// Ref
-		print '<tr><td width="18%">' . $langs->trans('Ref') . '</td>';
-		print '<td colspan="3">';
-		print $form->showrefnav($commande, 'ref', '', 1, 'ref', 'ref');
+		if ($action != 'edit_identification') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_identification' . $licenseOrderData['rowid'] . '&amp;id=' . $order->id . '">' . img_edit($langs->trans('SetIdentification'), 1) . '</a></td>';
+		print '</tr></table>';
+		print '</td><td>';
+		if ($action == 'edit_identification' . $licenseOrderData['rowid']) {
+			print '<form name="set_identification_"' . $licenseOrderData['rowid'] . ' action="' . $_SERVER["PHP_SELF"] . '?id=' . $order->id . '" method="post">';
+			print '<input type="hidden" name="token" value="' . $_SESSION['newtoken'] . '">';
+			print '<input type="hidden" name="action" value="set_identification_' . $licenseOrderData['rowid'] . '">';
+			print '<input type="text" name="identification" value="' . $licenseOrderData['identification'] . '">';
+			print '<input type="submit" class="button" value="' . $langs->trans('Modify') . '">';
+			print '</form>';
+		} else {
+			print $licenseOrderData['identification'];
+		}
 		print '</td>';
 		print '</tr>';
 
-		if ($licenseOrder->fetchList("fk_commande = $commande->id", '') > 0) {
-			$licenseOrderCount = count($licenseOrder->dataset);
-			// Ref commande client
-			print '<tr><td width="18%">';
-			print $langs->trans('RefCustomer') . '</td>';
-			print '<td colspan="2">' . $commande->ref_client;
-			print '</td>';
+		// License note
+		print '<tr><td height="10" width="20%">';
+		print '<table class="nobordernopadding" width="100%"><tr><td>';
+		print $langs->trans('LicenseNote');
+		print '</td>';
 
-			// Third party
-			print '<tr><td>' . $langs->trans('Company') . '</td>';
-			print '<td colspan="3">' . $soc->getNomUrl(1) . '</td>';
-			print '</tr>';
-
-			// Date
-			print '<tr><td>' . $langs->trans('Date') . '</td>';
-			print '<td colspan="3">' . dol_print_date($commande->date, 'daytext') . '</td>';
-			print '</tr>';
-
-			// Licenses qty
-			print '<tr><td>' . $langs->trans('Licenses') . '</td>';
-			print '<td colspan="3">' . $licenseOrderCount . '</td>';
-			print '</tr>';
+		if ($action != 'edit_note') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_note' . $licenseOrderData['rowid'] . '&amp;id=' . $order->id . '">' . img_edit($langs->trans('SetNote'), 1) . '</a></td>';
+		print '</tr></table>';
+		print '</td><td>';
+		if ($action == 'edit_note' . $licenseOrderData['rowid']) {
+			print '<form name="set_note_"' . $licenseOrderData['rowid'] . ' action="' . $_SERVER["PHP_SELF"] . '?id=' . $order->id . '" method="post">';
+			print '<input type="hidden" name="token" value="' . $_SESSION['newtoken'] . '">';
+			print '<input type="hidden" name="action" value="set_note_' . $licenseOrderData['rowid'] . '">';
+			print '<input type="text" name="note" value="' . $licenseOrderData['note'] . '">';
+			print '<input type="submit" class="button" value="' . $langs->trans('Modify') . '">';
+			print '</form>';
 		} else {
-			// no product with license
-			print '<tr><td width="18%">' . $langs->trans('License') . '</td>';
-			print '<td colspan="3">';
-			print $langs->trans('NoProductWithLicense');
-			print '</td>';
-			print '</tr>';
+			print $licenseOrderData['note'];
 		}
+		print '</td>';
+		print '</tr>';
 
+		// License output mode
+		print '<tr><td height="10" width="20%">';
+		print '<table class="nobordernopadding" width="100%"><tr><td>';
+		print $langs->trans('LicenseOutputMode');
+		print '</td>';
+		$outputModes = Licensekeylist::getOutputModes();
+		if ($action != 'edit_outputmode') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_outputmode' . $licenseOrderData['rowid'] . '&amp;id=' . $order->id . '">' . img_edit($langs->trans('SetOutputMode'), 1) . '</a></td>';
+		print '</tr></table>';
+		print '</td><td>';
+		if ($action == 'edit_outputmode' . $licenseOrderData['rowid']) {
+			print '<form name="set_outputmode_"' . $licenseOrderData['rowid'] . ' action="' . $_SERVER["PHP_SELF"] . '?id=' . $order->id . '" method="post">';
+			print '<input type="hidden" name="token" value="' . $_SESSION['newtoken'] . '">';
+			print '<input type="hidden" name="action" value="set_outputmode_' . $licenseOrderData['rowid'] . '">';
+			print $form->selectarray('output_mode', $outputModes, $licenseOrderData['outputmode']);
+			print '<input type="submit" class="button" value="' . $langs->trans('Modify') . '">';
+			print '</form>';
+		} else {
+			print $outputModes[$licenseOrderData['output_mode']];
+		}
+		print '</td>';
+		print '</tr>';
 
-		print '</table><br>';
+		$licenseOrderDet = new Licenseorderdet($db);
+		$currentLicenseOrder = new Licenseorder($db);
 
-
-		/**
-		 *  license Orders grouped by license order
-		 *
-		 */
-		if ($licenseOrderCount > 0) {
-			foreach ($licenseOrder->dataset as $licenseOrderData) {
-				print '<table class="border" width="100%">';
-				// License Identification
-				print '<tr><td height="10" width="20%">';
-				print '<table class="nobordernopadding" width="100%"><tr><td>';
-				print $langs->trans('LicenseIdentification');
-				print '</td>';
-
-				if ($action != 'edit_identification') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_identification' . $licenseOrderData['rowid'] . '&amp;id=' . $commande->id . '">' . img_edit($langs->trans('SetIdentification'), 1) . '</a></td>';
-				print '</tr></table>';
-				print '</td><td>';
-				if ($action == 'edit_identification' . $licenseOrderData['rowid']) {
-					print '<form name="set_identification_"' . $licenseOrderData['rowid'] . ' action="' . $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '" method="post">';
-					print '<input type="hidden" name="token" value="' . $_SESSION['newtoken'] . '">';
-					print '<input type="hidden" name="action" value="set_identification_' . $licenseOrderData['rowid'] . '">';
-					print '<input type="text" name="identification" value="' . $licenseOrderData['identification'] . '">';
-					print '<input type="submit" class="button" value="' . $langs->trans('Modify') . '">';
-					print '</form>';
-				} else {
-					print $licenseOrderData['identification'];
-				}
-				print '</td>';
+		if (($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) && ($licenseOrderDet->fetchList("fk_license_order = $currentLicenseOrder->id") > 0)) {
+			print '<table class="liste" width="100%">';
+			$colnr = 0;
+			print '<tr class="liste_titre">';
+			print '<td>' . $langs->trans("Product") . '</td>';
+			$colnr++;
+			print '<td align="center">' . $langs->trans("LicenseType") . '</td>';
+			$colnr++;
+			print '<td align="center">' . $langs->trans("LicenseName") . '</td>';
+			$colnr++;
+			print '<td align="center">' . $langs->trans("DateCreate") . '</td>';
+			$colnr++;
+			print '<td align="center">' . $langs->trans("DateExpire") . '</td>';
+			$colnr++;
+			print '<td align="center">' . $langs->trans("Status") . '</td>';
+			$colnr++;
+			print '<td align="center">' . $langs->trans("LicenseKey") . '</td>';
+			$colnr++;
+			print '<td align="center">' . $langs->trans("Action") . '</td>';
+			$colnr++;
+			print "</tr>\n";
+			$var = true;
+			$multiLicense->key_mode = $currentLicenseOrder->key_mode;
+			$multiLicense->output_mode = $currentLicenseOrder->output_mode;
+			$multiLicense->code = '';
+			foreach ($licenseOrderDet->dataset as $data) {
+				$var = !$var;
+				print "<tr " . $bc[$var] . ">";
+				$currentLicenseOrder->licenseOrderDetList($form, $data, $multiLicense, $order);
 				print '</tr>';
+			}
 
-				// License note
-				print '<tr><td height="10" width="20%">';
-				print '<table class="nobordernopadding" width="100%"><tr><td>';
-				print $langs->trans('LicenseNote');
-				print '</td>';
-
-				if ($action != 'edit_note') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_note' . $licenseOrderData['rowid'] . '&amp;id=' . $commande->id . '">' . img_edit($langs->trans('SetNote'), 1) . '</a></td>';
-				print '</tr></table>';
-				print '</td><td>';
-				if ($action == 'edit_note' . $licenseOrderData['rowid']) {
-					print '<form name="set_note_"' . $licenseOrderData['rowid'] . ' action="' . $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '" method="post">';
-					print '<input type="hidden" name="token" value="' . $_SESSION['newtoken'] . '">';
-					print '<input type="hidden" name="action" value="set_note_' . $licenseOrderData['rowid'] . '">';
-					print '<input type="text" name="note" value="' . $licenseOrderData['note'] . '">';
-					print '<input type="submit" class="button" value="' . $langs->trans('Modify') . '">';
-					print '</form>';
-				} else {
-					print $licenseOrderData['note'];
-				}
-				print '</td>';
-				print '</tr>';
-
-				// License output mode
-				print '<tr><td height="10" width="20%">';
-				print '<table class="nobordernopadding" width="100%"><tr><td>';
-				print $langs->trans('LicenseOutputMode');
-				print '</td>';
-				$outputModes = Licensekeylist::getOutputModes();
-				if ($action != 'edit_outputmode') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_outputmode' . $licenseOrderData['rowid'] . '&amp;id=' . $commande->id . '">' . img_edit($langs->trans('SetOutputMode'), 1) . '</a></td>';
-				print '</tr></table>';
-				print '</td><td>';
-				if ($action == 'edit_outputmode' . $licenseOrderData['rowid']) {
-					print '<form name="set_outputmode_"' . $licenseOrderData['rowid'] . ' action="' . $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '" method="post">';
-					print '<input type="hidden" name="token" value="' . $_SESSION['newtoken'] . '">';
-					print '<input type="hidden" name="action" value="set_outputmode_' . $licenseOrderData['rowid'] . '">';
-					print $form->selectarray('output_mode', $outputModes, $licenseOrderData['outputmode']);
-					print '<input type="submit" class="button" value="' . $langs->trans('Modify') . '">';
-					print '</form>';
-				} else {
-					print $outputModes[$licenseOrderData['output_mode']];
-				}
-				print '</td>';
-				print '</tr>';
-
-				$licenseOrderDet = new Licenseorderdet($db);
-				$currentLicenseOrder = new Licenseorder($db);
-
-				if (($currentLicenseOrder->fetch($licenseOrderData['rowid'], 0, 0) > 0) && ($licenseOrderDet->fetchList("fk_license_order = $currentLicenseOrder->id") > 0)) {
-					print '<table class="liste" width="100%">';
-					$colnr = 0;
-					print '<tr class="liste_titre">';
-					print '<td>' . $langs->trans("Product") . '</td>';
-					$colnr++;
-					print '<td align="center">' . $langs->trans("LicenseType") . '</td>';
-					$colnr++;
-					print '<td align="center">' . $langs->trans("LicenseName") . '</td>';
-					$colnr++;
-					print '<td align="center">' . $langs->trans("DateCreate") . '</td>';
-					$colnr++;
-					print '<td align="center">' . $langs->trans("DateExpire") . '</td>';
-					$colnr++;
-					print '<td align="center">' . $langs->trans("Status") . '</td>';
-					$colnr++;
-					print '<td align="center">' . $langs->trans("LicenseKey") . '</td>';
-					$colnr++;
-					print "</tr>\n";
-					$var = true;
-					$multiLicense->key_mode = $currentLicenseOrder->key_mode;
-					$multiLicense->output_mode = $currentLicenseOrder->output_mode;
-					$multiLicense->code = '';
-					foreach ($licenseOrderDet->dataset as $data) {
-						$var = !$var;
-						print "<tr " . $bc[$var] . ">";
-						$currentLicenseOrder->licenseOrderDetList($form, $data, $multiLicense);
-						print '</tr>';
-					}
-
-					// TODO show other licenses of same customer and identification of older orders
-					$otherLicenseOrders = new Licenseorder($db);
-					if (isset($currentLicenseOrder->identification) && $otherLicenseOrders->fetchList("fk_customer = $commande->socid AND identification = '$currentLicenseOrder->identification'") > 0) {
-						foreach ($otherLicenseOrders->dataset as $data) {
-							$otherLicenOrderId = $data['rowid'];
-							if ($otherLicenOrderId < $currentLicenseOrder->id) {
-								$otherLicenseOrdersDet = new Licenseorderdet($db);
-								if ($otherLicenseOrdersDet->fetchList("fk_license_order = $otherLicenOrderId") > 0) {
-									foreach ($otherLicenseOrdersDet->dataset as $data) {
-										$otherLicenseOrder = new Licenseorder($db);
-										if ($otherLicenseOrder->fetch($data['fk_license_order'], 0, 0) > 0) {
-											$var = !$var;
-											$multiLicense->key_mode = $otherLicenseOrder->key_mode;
-											print "<tr " . $bc[$var] . ">";
-											$otherLicenseOrder->licenseOrderDetList($form, $data, $multiLicense);
-											print '</tr>';
-										}
+			// TODO show other licenses of same customer and identification of older orders
+			$otherLicenseOrders = new Licenseorder($db);
+			if (isset($currentLicenseOrder->identification) && $otherLicenseOrders->fetchList("fk_customer = $order->socid AND identification = '$currentLicenseOrder->identification'") > 0) {
+				foreach ($otherLicenseOrders->dataset as $licenseOrderData) {
+					$otherLicenOrderId = $licenseOrderData['rowid'];
+					if ($otherLicenOrderId < $currentLicenseOrder->id) {
+						$otherLicenseOrdersDet = new Licenseorderdet($db);
+						if ($otherLicenseOrdersDet->fetchList("fk_license_order = $otherLicenOrderId") > 0) {
+							foreach ($otherLicenseOrdersDet->dataset as $data) {
+								$otherLicenseOrder = new Licenseorder($db);
+								if ($otherLicenseOrder->fetch($data['fk_license_order'], 0, 0) > 0) {
+									$otherOrder = new Commande($db);
+									if ($otherOrder->fetch($otherLicenseOrder->fk_commande) > 0) {
+										// show other license orders
+										$var = !$var;
+										$multiLicense->key_mode = $otherLicenseOrder->key_mode;
+										print "<tr " . $bc[$var] . ">";
+										$otherLicenseOrder->licenseOrderDetList($form, $data, $multiLicense, $order, $otherOrder);
+										print '</tr>';
 									}
 								}
 							}
 						}
 					}
-
-					if ($multiLicense->code) {
-						// print multilicense
-						print '<tr><td colspan="' . ($colnr - 1) . '" valign="center" align="center">' . $langs->trans('MultiLicense');
-						print $currentLicenseOrder->htmlLicense($multiLicense);
-						print '</td>';
-						print '</tr>';
-					}
-
-					print '</table><br>';
 				}
-				print '</table><br>';
 			}
-			print '<div class="tabsAction">';
-			print dolGetButtonAction('', $langs->trans('RenewLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=renew_licenses');
-			print dolGetButtonAction('', $langs->trans('GenerateLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_licenses');
-			if ($commande->statut == 0) {
-				print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_doc', '', 0);
-			} else {
-				print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=generate_doc');
+
+			if ($multiLicense->code) {
+				// print multilicense
+				print '<tr><td colspan="' . ($colnr - 1) . '" valign="center" align="center">' . $langs->trans('MultiLicense');
+				print $currentLicenseOrder->htmlLicense($multiLicense);
+				print '</td>';
+				print '</tr>';
 			}
-			print dolGetButtonAction('', $langs->trans('CancelLicense'), 'danger', $_SERVER["PHP_SELF"] . '?id=' . $commande->id . '&amp;action=cancel_licenses');
-			print '</div>';
+
+			print '</table><br>';
 		}
-	} else {
-		/* non existing order */
-		print "Order does not exist";
+		print '</table><br>';
 	}
+	print '<div class="tabsAction">';
+	print dolGetButtonAction('', $langs->trans('RenewLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=renew_licenses');
+	print dolGetButtonAction('', $langs->trans('GenerateLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=generate_licenses');
+	if ($order->statut == 0) {
+		print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=generate_doc', '', 0);
+	} else {
+		print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=generate_doc');
+	}
+	print dolGetButtonAction('', $langs->trans('CancelLicense'), 'danger', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=cancel_licenses');
+	print '</div>';
 }
+
 dol_htmloutput_mesg($mesg);
 // End of page
 llxFooter();

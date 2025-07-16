@@ -276,7 +276,8 @@ class Licenseorder extends CommonObject
 		$sql.= " t.key_mode,";
 		$sql.= " t.qty_seq_id,";
 		$sql.= " t.fk_user_author,";
-		$sql.= " t.identification";
+		$sql.= " t.identification,";
+		$sql.= " t.status";
 
 		$sql.= " FROM ".MAIN_DB_PREFIX."license_order as t";
 		if (!empty($filter)) {
@@ -306,6 +307,7 @@ class Licenseorder extends CommonObject
 				$this->dataset[$row]['qty_seq_id'] = $obj->qty_seq_id;
 				$this->dataset[$row]['fk_user_author'] = $obj->fk_user_author;
 				$this->dataset[$row]['identification'] = $obj->identification;
+				$this->dataset[$row]['status'] = $obj->status;
 				$row++;
 			}
 			$this->db->free($resql);
@@ -493,10 +495,12 @@ class Licenseorder extends CommonObject
 	 * @param object $form form where list is part of
 	 * @param string $data licenseorderdet data
 	 * @param License &$multiLicense multiLicense reference to append multi licenses into
+	 * @param Licenseorder $order order object
+	 * @param Licenseorder|null $otherOrder other order object to use for cancel button
 	 *
 	 * @return void
 	 */
-	public function licenseOrderDetList($form, $data, &$multiLicense)
+	public function licenseOrderDetList($form, $data, &$multiLicense, $order, $otherOrder = null)
 	{
 		global $langs;
 
@@ -522,8 +526,9 @@ class Licenseorder extends CommonObject
 				//status
 				print '<td align="center">'.$this->getLibStatut(2).'</td>';
 				// print Licensekey when it is a single license else print 'multi'
-
+				$buttonEnabled = 0;
 				if ($multiLicense->key_mode == 'multi')	{
+					if ($this->status == self::STATUS_VALIDATED) $buttonEnabled = 1;
 					if ($multiLicense->code) $multiLicense->code .= $licenseKeylist->multi_key_separator;
 					$multiLicense->code .= $data['license_key'];
 					if ($data['license_key'] != '')	{
@@ -535,6 +540,17 @@ class Licenseorder extends CommonObject
 					$license->output_mode = $this->output_mode;
 
 					print $this->htmlLicense($license);
+				}
+
+				if ($otherOrder) {
+					$orderRef = $otherOrder->ref;
+				} else {
+					$orderRef = $order->ref;
+				}
+
+				if ($orderRef != $order->ref) {
+					// print button to cancel other license
+					print '<td align="center">'.dolGetButtonAction('', $langs->trans('CancelLicense', $orderRef), 'danger', $_SERVER["PHP_SELF"] . '?licenseid=' . $this->id . '&amp;id='.  $order->id .'&amp;action=cancel_license&token='.newToken(), '', $buttonEnabled).'</td>';
 				}
 			}
 		}
