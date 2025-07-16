@@ -329,7 +329,7 @@ if ($licenseOrderCount > 0) {
 		print $langs->trans('LicenseIdentification');
 		print '</td>';
 
-		if ($action != 'edit_identification') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_identification' . $licenseOrderData['rowid'] . '&amp;id=' . $order->id . '">' . img_edit($langs->trans('SetIdentification'), 1) . '</a></td>';
+		if ($action != 'edit_identification') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_identification' . $licenseOrderData['rowid'] . '&amp;id=' . $order->id . '&token='.newToken().'">' . img_edit($langs->trans('SetIdentification'), 1) . '</a></td>';
 		print '</tr></table>';
 		print '</td><td>';
 		if ($action == 'edit_identification' . $licenseOrderData['rowid']) {
@@ -351,7 +351,7 @@ if ($licenseOrderCount > 0) {
 		print $langs->trans('LicenseNote');
 		print '</td>';
 
-		if ($action != 'edit_note') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_note' . $licenseOrderData['rowid'] . '&amp;id=' . $order->id . '">' . img_edit($langs->trans('SetNote'), 1) . '</a></td>';
+		if ($action != 'edit_note') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_note' . $licenseOrderData['rowid'] . '&amp;id=' . $order->id . '&token='.newToken().'">' . img_edit($langs->trans('SetNote'), 1) . '</a></td>';
 		print '</tr></table>';
 		print '</td><td>';
 		if ($action == 'edit_note' . $licenseOrderData['rowid']) {
@@ -373,7 +373,7 @@ if ($licenseOrderCount > 0) {
 		print $langs->trans('LicenseOutputMode');
 		print '</td>';
 		$outputModes = Licensekeylist::getOutputModes();
-		if ($action != 'edit_outputmode') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_outputmode' . $licenseOrderData['rowid'] . '&amp;id=' . $order->id . '">' . img_edit($langs->trans('SetOutputMode'), 1) . '</a></td>';
+		if ($action != 'edit_outputmode') print '<td align="right"><a href="' . $_SERVER["PHP_SELF"] . '?action=edit_outputmode' . $licenseOrderData['rowid'] . '&amp;id=' . $order->id . '&token='.newToken().'">' . img_edit($langs->trans('SetOutputMode'), 1) . '</a></td>';
 		print '</tr></table>';
 		print '</td><td>';
 		if ($action == 'edit_outputmode' . $licenseOrderData['rowid']) {
@@ -464,14 +464,14 @@ if ($licenseOrderCount > 0) {
 		print '</table><br>';
 	}
 	print '<div class="tabsAction">';
-	print dolGetButtonAction('', $langs->trans('RenewLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=renew_licenses');
-	print dolGetButtonAction('', $langs->trans('GenerateLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=generate_licenses');
+	print dolGetButtonAction('', $langs->trans('RenewLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=renew_licenses&token='.newToken());
+	print dolGetButtonAction('', $langs->trans('GenerateLicense'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=generate_licenses&token='.newToken());
 	if ($order->statut == 0) {
-		print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=generate_doc', '', 0);
+		print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=generate_doc&token='.newToken(), '', 0);
 	} else {
-		print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=generate_doc');
+		print dolGetButtonAction('', $langs->trans('GenerateLicenseDoc'), 'default', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=generate_doc&token='.newToken());
 	}
-	print dolGetButtonAction('', $langs->trans('CancelLicense'), 'danger', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=cancel_licenses');
+	print dolGetButtonAction('', $langs->trans('CancelLicense'), 'danger', $_SERVER["PHP_SELF"] . '?id=' . $order->id . '&amp;action=cancel_licenses&token='.newToken());
 	print '</div>';
 }
 
