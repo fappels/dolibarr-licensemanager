@@ -67,3 +67,4 @@ LicenseDoc = License document
 LicenseForOrderCanceled = License(s) for order(s) %s canceled
 AlreadyCanceled = already canceled
 LicenseExpired = Expired at
+DownloadModule = Download module

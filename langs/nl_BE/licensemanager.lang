@@ -67,3 +67,4 @@ LicenseDoc = Licentie document
 LicenseForOrderCanceled = Licentie(s) voor order(s) %s geannuleerd
 AlreadyCanceled = reeds geannuleerd
 LicenseExpired = Vervallen op
+DownloadModule = Download module

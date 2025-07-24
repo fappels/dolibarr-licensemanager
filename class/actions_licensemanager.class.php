@@ -24,7 +24,7 @@
  * TODO: Write detailed description here.
  */
 
-require_once DOL_DOCUMENT_ROOT.'/core/class/commonhookactions.class.php';
+require_once DOL_DOCUMENT_ROOT . '/core/class/commonhookactions.class.php';
 
 /**
  * Class ActionsLicenseManager
@@ -136,19 +136,17 @@ class ActionsLicenseManager extends CommonHookActions
 	 */
 	public function PrintPageView($parameters, &$object, &$action, $hookmanager)
 	{
-		global $conf, $user, $langs;
+		global $conf, $form, $user, $langs;
 
 		$error = 0; // Error counter
 
 		/* print_r($parameters); print_r($object); echo "action: " . $action; */
 		// @phan-suppress-next-line PhanPluginEmptyStatementIf
 		if (in_array($parameters['currentcontext'], array('webportalpage', 'somecontext2'))) {	    // do something only for the context 'somecontext1' or 'somecontext2'
-			// Do what you want here...
-			// You can for example load and use call global vars like $fieldstosearchall to overwrite them, or update the database depending on $action and GETPOST values.
+			$langs->load('licensemanager@licensemanager');
+			$form = new FormWebPortal($this->db);
 			// need core patch to make formList public
 			if (isset($object->controllerInstance->formList->arrayfields)) {
-				$langs->load('licensemanager@licensemanager');
-				$object->controllerInstance->formList->titleKey = 'Licenses';
 				$object->controllerInstance->formList->arrayfields['t.date_livraison']['checked'] = 0;
 				$object->controllerInstance->formList->arrayfields['t.total_ht']['checked'] = 0;
 				$object->controllerInstance->formList->arrayfields['t.total_tva']['checked'] = 0;
@@ -156,6 +154,20 @@ class ActionsLicenseManager extends CommonHookActions
 				$object->controllerInstance->formList->arrayfields['t.fk_statut']['checked'] = 0;
 				$object->controllerInstance->formList->arrayfields['download_link']['checked'] = 0;
 			}
+
+			print '<div class="div-table-responsive-no-min">';
+			// Print link to connector need core patch to allow download of type 'archive'
+			print '<table class="noborder centpercent">';
+			print '<tr class="liste_titre">';
+			print '<td class="right">';
+			print $langs->trans('DownloadModule').' ';
+			$filename = dol_sanitizeFileName('module');
+			$filedir = $conf->commande->multidir_output[$conf->entity].'/module';
+			print $form->getDocumentsLink('commande', $filename, $filedir, '', '', 1);
+			print '</td>';
+			print '</tr>';
+			print '</table>';
+			print '</div>';
 
 			if (!$error) {
 				$this->results = array('myreturn' => 999);
@@ -225,7 +237,7 @@ class ActionsLicenseManager extends CommonHookActions
 
 		/* print_r($parameters); print_r($object); echo "action: " . $action; */
 		if (in_array($parameters['currentcontext'], array('somecontext1', 'somecontext2'))) {		// do something only for the context 'somecontext1' or 'somecontext2'
-			$this->resprints = '<option value="0"'.($disabled ? ' disabled="disabled"' : '').'>'.$langs->trans("LicenseManagerMassAction").'</option>';
+			$this->resprints = '<option value="0"' . ($disabled ? ' disabled="disabled"' : '') . '>' . $langs->trans("LicenseManagerMassAction") . '</option>';
 		}
 
 		if (!$error) {
@@ -257,7 +269,7 @@ class ActionsLicenseManager extends CommonHookActions
 
 		$ret = 0;
 		$deltemp = array();
-		dol_syslog(get_class($this).'::executeHooks action='.$action);
+		dol_syslog(get_class($this) . '::executeHooks action=' . $action);
 
 		/* print_r($parameters); print_r($object); echo "action: " . $action; */
 		// @phan-suppress-next-line PhanPluginEmptyStatementIf
@@ -286,7 +298,7 @@ class ActionsLicenseManager extends CommonHookActions
 
 		$ret = 0;
 		$deltemp = array();
-		dol_syslog(get_class($this).'::executeHooks action='.$action);
+		dol_syslog(get_class($this) . '::executeHooks action=' . $action);
 
 		/* print_r($parameters); print_r($object); echo "action: " . $action; */
 		// @phan-suppress-next-line PhanPluginEmptyStatementIf
@@ -348,12 +360,12 @@ class ActionsLicenseManager extends CommonHookActions
 
 		if (in_array($parameters['currentcontext'], array('orderlistdetail'))) {
 			if ($user->rights->licensemanager->licensemanager->read) {
-				$this->resprints .= " LEFT JOIN ".$this->db->prefix()."license_order lo on c.rowid = lo.fk_commande";
+				$this->resprints .= " LEFT JOIN " . $this->db->prefix() . "license_order lo on c.rowid = lo.fk_commande";
 			}
 		}
 		if (in_array($parameters['currentcontext'], array('webportalpage'))) {
 			if ($user->rights->licensemanager->licensemanager->read) {
-				$this->resprints .= " LEFT JOIN ".$this->db->prefix()."license_order lo on t.rowid = lo.fk_commande";
+				$this->resprints .= " LEFT JOIN " . $this->db->prefix() . "license_order lo on t.rowid = lo.fk_commande";
 			}
 		}
 
@@ -460,19 +472,16 @@ class ActionsLicenseManager extends CommonHookActions
 		if (in_array($parameters['currentcontext'], array('orderlistdetail', 'webportalpage'))) {
 			if ($user->rights->licensemanager->licensemanager->read) {
 				$langs->load('licensemanager@licensemanager');
-				if (in_array($parameters['currentcontext'], array('webportalpage'))) {
-					$form = new FormWebPortal($this->db);
-				}
 				dol_include_once('/licensemanager/class/licenseorder.class.php');
 				$search_identification = GETPOST('search_identification', 'alpha');
 				$this->resprints .= '<td class="liste_titre right">';
-				$this->resprints .= '<input class="flat" type="text" size="4" name="search_identification" value="'.$search_identification.'">';
+				$this->resprints .= '<input class="flat" type="text" size="4" name="search_identification" value="' . $search_identification . '">';
 				$this->resprints .= '</td>';
 				$this->resprints .= '<td class="liste_titre right">';
 				$this->resprints .= '</td>';
 				$search_license_note = GETPOST('search_license_note', 'alpha');
 				$this->resprints .= '<td class="liste_titre right">';
-				$this->resprints .= '<input class="flat" type="text" size="4" name="search_license_note" value="'.$search_license_note.'">';
+				$this->resprints .= '<input class="flat" type="text" size="4" name="search_license_note" value="' . $search_license_note . '">';
 				$this->resprints .= '</td>';
 				$search_status = GETPOST('search_license_status', 'alpha');
 				$this->resprints .= '<td class="liste_titre right">';
@@ -555,7 +564,7 @@ class ActionsLicenseManager extends CommonHookActions
 				dol_include_once('/licensemanager/class/licenseorder.class.php');
 				$langs->load('licensemanager@licensemanager');
 				$obj = $parameters['obj'];
-				$this->resprints .= '<td class="right">'.$obj->identification.'</td>';
+				$this->resprints .= '<td class="right">' . $obj->identification . '</td>';
 				$this->resprints .= '<td class="right">';
 				if (!empty($obj->license_date_valid)) {
 					$date_valid = $this->db->jdate($obj->license_date_valid);
@@ -565,10 +574,15 @@ class ActionsLicenseManager extends CommonHookActions
 					$this->resprints .= dol_print_date($date_valid);
 				}
 				$this->resprints .= '</td>';
-				$this->resprints .= '<td class="right">'.$obj->license_note.'</td>';
+				$this->resprints .= '<td class="right">' . $obj->license_note . '</td>';
 				$licenseOrder = new Licenseorder($this->db);
-				$this->resprints .= '<td class="right">'.$licenseOrder->libStatut($obj->license_status, 2).'</td>';
+				$this->resprints .= '<td class="right">' . $licenseOrder->libStatut($obj->license_status, 2) . '</td>';
 				if (in_array($parameters['currentcontext'], array('webportalpage'))) {
+					//$this->resprints .= '<td class="right">';
+					//$product = new Product($this->db);
+					//$product->fetch(5);
+					//$this->resprints .= $product->show_photos('product', $conf->product->multidir_output[$product->entity], 1, 1, 0, 0, 0, 120, 160, 0, 0, 0, '', 'photoref photokanban');
+					//$this->resprints .= '</td>';
 					// Download link
 					$order = new Commande($this->db);
 					$element = $order->element;
@@ -617,7 +631,7 @@ class ActionsLicenseManager extends CommonHookActions
 			$this->results['picto'] = 'licensemanager@licensemanager';
 		}
 
-		$head[$h][0] = 'customreports.php?objecttype='.$parameters['objecttype'].(empty($parameters['tabfamily']) ? '' : '&tabfamily='.$parameters['tabfamily']);
+		$head[$h][0] = 'customreports.php?objecttype=' . $parameters['objecttype'] . (empty($parameters['tabfamily']) ? '' : '&tabfamily=' . $parameters['tabfamily']);
 		$head[$h][1] = $langs->trans("CustomReports");
 		$head[$h][2] = 'customreports';
 
@@ -692,7 +706,7 @@ class ActionsLicenseManager extends CommonHookActions
 			if (in_array($element, ['context1', 'context2'])) {
 				$datacount = 0;
 
-				$parameters['head'][$counter][0] = dol_buildpath('/licensemanager/licensemanager_tab.php', 1) . '?id=' . $id . '&amp;module='.$element;
+				$parameters['head'][$counter][0] = dol_buildpath('/licensemanager/licensemanager_tab.php', 1) . '?id=' . $id . '&amp;module=' . $element;
 				$parameters['head'][$counter][1] = $langs->trans('LicenseManagerTab');
 				if ($datacount > 0) {
 					$parameters['head'][$counter][1] .= '<span class="badge marginleftonlyshort">' . $datacount . '</span>';

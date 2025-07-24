@@ -67,3 +67,4 @@ LicenseDoc = Document de licence
 LicenseForOrderCanceled = Licence(s) pour la/les commande(s) %s annulée(s)
 AlreadyCanceled = déjà annulé
 LicenseExpired = Expiré à
+DownloadModule = Télécharger le module
