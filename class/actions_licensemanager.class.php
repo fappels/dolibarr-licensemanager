@@ -443,7 +443,7 @@ class ActionsLicenseManager extends CommonHookActions
 					$this->resprints .= ' AND lo.identification IS NOT NULL';
 				}
 				$search_status = GETPOST('search_license_status', 'int');
-				if ($search_status >= 0) {
+				if ($search_status >= 0 && $search_status != '') {
 					$this->resprints .= natural_search('lo.status', $search_status, 1);
 				}
 			}
