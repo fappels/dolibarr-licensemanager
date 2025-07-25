@@ -136,46 +136,50 @@ class ActionsLicenseManager extends CommonHookActions
 	 */
 	public function PrintPageView($parameters, &$object, &$action, $hookmanager)
 	{
-		global $conf, $form, $user, $langs;
+		global $conf, $form, $url_file, $langs;
 
 		$error = 0; // Error counter
 
 		/* print_r($parameters); print_r($object); echo "action: " . $action; */
 		// @phan-suppress-next-line PhanPluginEmptyStatementIf
 		if (in_array($parameters['currentcontext'], array('webportalpage', 'somecontext2'))) {	    // do something only for the context 'somecontext1' or 'somecontext2'
-			$langs->load('licensemanager@licensemanager');
-			$form = new FormWebPortal($this->db);
-			// need core patch to make formList public
-			if (isset($object->controllerInstance->formList->arrayfields)) {
-				$object->controllerInstance->formList->arrayfields['t.date_livraison']['checked'] = 0;
-				$object->controllerInstance->formList->arrayfields['t.total_ht']['checked'] = 0;
-				$object->controllerInstance->formList->arrayfields['t.total_tva']['checked'] = 0;
-				$object->controllerInstance->formList->arrayfields['t.total_ttc']['checked'] = 0;
-				$object->controllerInstance->formList->arrayfields['t.fk_statut']['checked'] = 0;
-				$object->controllerInstance->formList->arrayfields['download_link']['checked'] = 0;
-			}
+			if ($object->controller == 'orderlist') {
+				dol_include_once('/webportal/class/html.formwebportal.class.php');
+				$langs->load('licensemanager@licensemanager');
+				$form = new FormWebPortal($this->db);
+				$url_file = $object->getControllerUrl($object->controller);
+				// need core patch to make formList public
+				if (isset($object->controllerInstance->formList->arrayfields)) {
+					$object->controllerInstance->formList->arrayfields['t.date_livraison']['checked'] = 0;
+					$object->controllerInstance->formList->arrayfields['t.total_ht']['checked'] = 0;
+					$object->controllerInstance->formList->arrayfields['t.total_tva']['checked'] = 0;
+					$object->controllerInstance->formList->arrayfields['t.total_ttc']['checked'] = 0;
+					$object->controllerInstance->formList->arrayfields['t.fk_statut']['checked'] = 0;
+					$object->controllerInstance->formList->arrayfields['download_link']['checked'] = 0;
+				}
 
-			print '<div class="div-table-responsive-no-min">';
-			// Print link to connector need core patch to allow download of type 'archive'
-			print '<table class="noborder centpercent">';
-			print '<tr class="liste_titre">';
-			print '<td class="right">';
-			print $langs->trans('DownloadModule').' ';
-			$filename = dol_sanitizeFileName('module');
-			$filedir = $conf->commande->multidir_output[$conf->entity].'/module';
-			print $form->getDocumentsLink('commande', $filename, $filedir, '', '', 1);
-			print '</td>';
-			print '</tr>';
-			print '</table>';
-			print '</div>';
+				print '<div class="div-table-responsive-no-min">';
+				// Print link to connector need core patch to allow download of type 'archive'
+				print '<table class="noborder centpercent">';
+				print '<tr class="liste_titre">';
+				print '<td class="right">';
+				print $langs->trans('DownloadModule').' ';
+				$filename = dol_sanitizeFileName('module');
+				$filedir = $conf->commande->multidir_output[$conf->entity].'/module';
+				print $form->getDocumentsLink('commande', $filename, $filedir, '', '', 1);
+				print '</td>';
+				print '</tr>';
+				print '</table>';
+				print '</div>';
 
-			if (!$error) {
-				$this->results = array('myreturn' => 999);
-				$this->resprints = 'A text to show';
-				return 0; // or return 1 to replace standard code
-			} else {
-				$this->errors[] = 'Error message';
-				return -1;
+				if (!$error) {
+					$this->results = array('myreturn' => 999);
+					$this->resprints = 'A text to show';
+					return 0; // or return 1 to replace standard code
+				} else {
+					$this->errors[] = 'Error message';
+					return -1;
+				}
 			}
 		}
 
@@ -474,10 +478,10 @@ class ActionsLicenseManager extends CommonHookActions
 				$langs->load('licensemanager@licensemanager');
 				dol_include_once('/licensemanager/class/licenseorder.class.php');
 				$search_identification = GETPOST('search_identification', 'alpha');
-				$this->resprints .= '<td class="liste_titre right">';
+				$this->resprints .= '<td class="liste_titre right grid width150">';
 				$this->resprints .= '<input class="flat" type="text" size="4" name="search_identification" value="' . $search_identification . '">';
 				$this->resprints .= '</td>';
-				$this->resprints .= '<td class="liste_titre right">';
+				$this->resprints .= '<td class="liste_titre right grid width150">';
 				$this->resprints .= '</td>';
 				$search_license_note = GETPOST('search_license_note', 'alpha');
 				$this->resprints .= '<td class="liste_titre right">';
@@ -515,12 +519,12 @@ class ActionsLicenseManager extends CommonHookActions
 	 */
 	public function printFieldListTitle($parameters, &$object, &$action, $hookmanager)
 	{
-		global $conf, $user, $langs;
+		global $conf, $user, $langs, $url_file;
 
 		$error = 0; // Error counter
 		$this->resprints = '';
 
-		if (in_array($parameters['currentcontext'], array('orderlistdetail', 'webportalpage'))) {
+		if (in_array($parameters['currentcontext'], array('orderlistdetail'))) {
 			if ($user->rights->licensemanager->licensemanager->read) {
 				$langs->load('licensemanager@licensemanager');
 				$sortfield = $parameters['sortfield'];
@@ -533,6 +537,77 @@ class ActionsLicenseManager extends CommonHookActions
 				$this->resprints .= getTitleFieldOfList($langs->trans('LicenseDoc'));
 			}
 		}
+
+		if (in_array($parameters['currentcontext'], array('webportalpage'))) {
+			if ($user->rights->licensemanager->licensemanager->read) {
+				$langs->load('licensemanager@licensemanager');
+				$sortfield = $parameters['sortfield'];
+				$sortorder = $parameters['sortorder'];
+				$sortList = $parameters['sortList'];
+				$totalarray = $parameters['totalarray'];
+
+				$tableKey = 'identification';
+				$tableOrder = '';
+				if (array_key_exists($tableKey, $sortList)) {
+					$tableOrder = strtolower($sortList[$tableKey]);
+				}
+				$url_param = $url_file . '&sortfield=' . $tableKey . '&sortorder=' . ($tableOrder == 'desc' ? 'asc' : 'desc') . $param;
+				$this->resprints .= '<th data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
+				$this->resprints .= '<a href="' . $url_param . '">';
+				$this->resprints .= $langs->trans('License');
+				$this->resprints .= '</a>';
+				$this->resprints .= '</th>';
+				$totalarray['nbfield']++;
+
+				$tableKey = 'license_date_valid';
+				$tableOrder = '';
+				if (array_key_exists($tableKey, $sortList)) {
+					$tableOrder = strtolower($sortList[$tableKey]);
+				}
+				$url_param = $url_file . '&sortfield=' . $tableKey . '&sortorder=' . ($tableOrder == 'desc' ? 'asc' : 'desc') . $param;
+				$this->resprints .= '<th data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
+				$this->resprints .= '<a href="' . $url_param . '">';
+				$this->resprints .= $langs->trans('DateValid');
+				$this->resprints .= '</a>';
+				$this->resprints .= '</th>';
+				$totalarray['nbfield']++;
+
+				$tableKey = 'license_note';
+				$tableOrder = '';
+				if (array_key_exists($tableKey, $sortList)) {
+					$tableOrder = strtolower($sortList[$tableKey]);
+				}
+				$url_param = $url_file . '&sortfield=' . $tableKey . '&sortorder=' . ($tableOrder == 'desc' ? 'asc' : 'desc') . $param;
+				$this->resprints .= '<th data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
+				$this->resprints .= '<a href="' . $url_param . '">';
+				$this->resprints .= $langs->trans('LicenseNote');
+				$this->resprints .= '</a>';
+				$this->resprints .= '</th>';
+				$totalarray['nbfield']++;
+
+				$tableKey = 'license_status';
+				$tableOrder = '';
+				if (array_key_exists($tableKey, $sortList)) {
+					$tableOrder = strtolower($sortList[$tableKey]);
+				}
+				$url_param = $url_file . '&sortfield=' . $tableKey . '&sortorder=' . ($tableOrder == 'desc' ? 'asc' : 'desc') . $param;
+				$this->resprints .= '<th data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
+				$this->resprints .= '<a href="' . $url_param . '">';
+				$this->resprints .= $langs->trans('LicenseStatus');
+				$this->resprints .= '</a>';
+				$this->resprints .= '</th>';
+				$totalarray['nbfield']++;
+
+				$this->resprints .= '<th scope="col">';
+				$this->resprints .= $langs->trans('LicenseDoc');
+				$this->resprints .= '</th>';
+				$totalarray['nbfield']++;
+			}
+		}
+
+
+
+
 
 		if (! $error) {
 			return 0;
@@ -560,7 +635,6 @@ class ActionsLicenseManager extends CommonHookActions
 
 		if (in_array($parameters['currentcontext'], array('orderlistdetail', 'webportalpage'))) {
 			if ($user->rights->licensemanager->licensemanager->read) {
-				/** @var FormWebPortal $form  */
 				dol_include_once('/licensemanager/class/licenseorder.class.php');
 				$langs->load('licensemanager@licensemanager');
 				$obj = $parameters['obj'];
@@ -578,6 +652,7 @@ class ActionsLicenseManager extends CommonHookActions
 				$licenseOrder = new Licenseorder($this->db);
 				$this->resprints .= '<td class="right">' . $licenseOrder->libStatut($obj->license_status, 2) . '</td>';
 				if (in_array($parameters['currentcontext'], array('webportalpage'))) {
+					/** @var FormWebPortal $form  */
 					//$this->resprints .= '<td class="right">';
 					//$product = new Product($this->db);
 					//$product->fetch(5);
