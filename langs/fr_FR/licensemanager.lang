@@ -68,3 +68,4 @@ LicenseForOrderCanceled = Licence(s) pour la/les commande(s) %s annulée(s)
 AlreadyCanceled = déjà annulé
 LicenseExpired = Expiré à
 DownloadModule = Télécharger le module
+DownloadModuleInstructions = Téléchargez le fichier zip et installez-le dans Dolibarr configuration->modules

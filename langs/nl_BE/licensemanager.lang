@@ -68,3 +68,4 @@ LicenseForOrderCanceled = Licentie(s) voor order(s) %s geannuleerd
 AlreadyCanceled = reeds geannuleerd
 LicenseExpired = Vervallen op
 DownloadModule = Download module
+DownloadModuleInstructions = Download het zip bestand en installeer in Dolibarr setup->modules

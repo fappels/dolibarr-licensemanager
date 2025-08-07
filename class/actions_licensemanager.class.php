@@ -168,6 +168,9 @@ class ActionsLicenseManager extends CommonHookActions
 				$filedir = $conf->commande->multidir_output[$conf->entity].'/module';
 				print $form->getDocumentsLink('commande', $filename, $filedir, '', '', 1);
 				print '</td>';
+				print '<td class="left">';
+				print $langs->trans('DownloadModuleInstructions');
+				print '</td>';
 				print '</tr>';
 				print '</table>';
 				print '</div>';
@@ -478,10 +481,10 @@ class ActionsLicenseManager extends CommonHookActions
 				$langs->load('licensemanager@licensemanager');
 				dol_include_once('/licensemanager/class/licenseorder.class.php');
 				$search_identification = GETPOST('search_identification', 'alpha');
-				$this->resprints .= '<td class="liste_titre right grid width150">';
+				$this->resprints .= '<td class="liste_titre right minwidth150">';
 				$this->resprints .= '<input class="flat" type="text" size="4" name="search_identification" value="' . $search_identification . '">';
 				$this->resprints .= '</td>';
-				$this->resprints .= '<td class="liste_titre right grid width150">';
+				$this->resprints .= '<td class="liste_titre right minwidth150">';
 				$this->resprints .= '</td>';
 				$search_license_note = GETPOST('search_license_note', 'alpha');
 				$this->resprints .= '<td class="liste_titre right">';

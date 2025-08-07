@@ -62,3 +62,4 @@ CancelLicense = Licentie de-activeren
 DateValid = Geldig tot
 LicenseStatus = Licentie status
 DownloadModule = Download module
+DownloadModuleInstructions = Download het zip bestand en installeer in Dolibarr setup->modules
