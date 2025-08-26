@@ -100,7 +100,8 @@ class modLicenseManager extends DolibarrModules
 			'hooks' => array(
 				'data' => array(
 					'orderlistdetail',
-					'webportalpage'
+					'webportalpage',
+					'pdfgeneration',
 				),
 				'entity' => '0',
 			),
