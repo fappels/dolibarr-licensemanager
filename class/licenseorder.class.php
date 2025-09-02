@@ -466,6 +466,8 @@ class Licenseorder extends CommonObject
 					$licenseOrderDet->datev = dol_time_plus_duree($now,$licenseKeylist->duration,$licenseKeylist->duration_unit);
 					if ($licenseKeylist->type == 0) {
 						if ($licenseOrderDet->update($user) > 0) {
+							$this->status = self::STATUS_VALIDATED;
+							$this->update($user);
 							return $licenseOrderDet->license_key;
 						}
 					} else {
@@ -473,6 +475,8 @@ class Licenseorder extends CommonObject
 						if ($licenseList->fetchNext($licenseKeylist->id) > 0) {
 							$licenseOrderDet->license_key = $licenseList->external_key;
 							if ($licenseOrderDet->update($user) > 0) {
+								$this->status = self::STATUS_VALIDATED;
+								$this->update($user);
 								return $licenseOrderDet->license_key;
 							}
 						}
@@ -529,8 +533,10 @@ class Licenseorder extends CommonObject
 				$buttonEnabled = 0;
 				if ($multiLicense->key_mode == 'multi')	{
 					if ($this->status == self::STATUS_VALIDATED) $buttonEnabled = 1;
-					if ($multiLicense->code) $multiLicense->code .= $licenseKeylist->multi_key_separator;
-					$multiLicense->code .= $data['license_key'];
+					if ($this->status != self::STATUS_CANCELED) {
+						if ($multiLicense->code) $multiLicense->code .= $licenseKeylist->multi_key_separator;
+						$multiLicense->code .= $data['license_key'];
+					}
 					if ($data['license_key'] != '')	{
 						print '<td align="center">'.$langs->trans('multi').'</td>';
 					}
