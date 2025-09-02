@@ -358,6 +358,20 @@ class ActionsLicenseManager extends CommonHookActions
 			}
 		}
 
+		if (in_array($parameters['currentcontext'], array('orderlistdetail'))) {
+			$user->loadRights('licensemanager');
+			if ($user->rights->licensemanager->licensemanager->read) {
+				$this->resprints .= ', (SELECT GROUP_CONCAT(cdl.fk_product, ",") FROM '.$this->db->prefix().'commandedet as cdl INNER JOIN '.$this->db->prefix().'license_orderdet lod ON lo.rowid = lod.fk_license_order INNER JOIN '.$this->db->prefix().'license_product lp ON lp.fk_product = cdl.fk_product AND lp.rowid = lod.fk_license_product WHERE cdl.fk_commande = c.rowid) as product_ids';
+			}
+		}
+
+		if (in_array($parameters['currentcontext'], array('webportalpage'))) {
+			$user->loadRights('licensemanager');
+			if ($user->rights->licensemanager->licensemanager->read) {
+				$this->resprints .= ', (SELECT GROUP_CONCAT(cdl.fk_product, ",") FROM '.$this->db->prefix().'commandedet as cdl INNER JOIN '.$this->db->prefix().'license_orderdet lod ON lo.rowid = lod.fk_license_order INNER JOIN '.$this->db->prefix().'license_product lp ON lp.fk_product = cdl.fk_product AND lp.rowid = lod.fk_license_product WHERE cdl.fk_commande = t.rowid) as product_ids';
+			}
+		}
+
 		if (! $error) {
 			return 0;
 		} else {
@@ -574,7 +588,7 @@ class ActionsLicenseManager extends CommonHookActions
 					$tableOrder = strtolower($sortList[$tableKey]);
 				}
 				$url_param = $url_file . '&sortfield=' . $tableKey . '&sortorder=' . ($tableOrder == 'desc' ? 'asc' : 'desc') . $param;
-				$this->resprints .= '<th data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
+				$this->resprints .= '<th class="right" data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
 				$this->resprints .= '<a href="' . $url_param . '">';
 				$this->resprints .= $langs->trans('License');
 				$this->resprints .= '</a>';
@@ -587,7 +601,7 @@ class ActionsLicenseManager extends CommonHookActions
 					$tableOrder = strtolower($sortList[$tableKey]);
 				}
 				$url_param = $url_file . '&sortfield=' . $tableKey . '&sortorder=' . ($tableOrder == 'desc' ? 'asc' : 'desc') . $param;
-				$this->resprints .= '<th data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
+				$this->resprints .= '<th class="right" data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
 				$this->resprints .= '<a href="' . $url_param . '">';
 				$this->resprints .= $langs->trans('DateValid');
 				$this->resprints .= '</a>';
@@ -600,7 +614,7 @@ class ActionsLicenseManager extends CommonHookActions
 					$tableOrder = strtolower($sortList[$tableKey]);
 				}
 				$url_param = $url_file . '&sortfield=' . $tableKey . '&sortorder=' . ($tableOrder == 'desc' ? 'asc' : 'desc') . $param;
-				$this->resprints .= '<th data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
+				$this->resprints .= '<th class="right" data-col="'.dol_escape_htmltag($tableKey ).'"  scope="col"' . ($tableOrder != '' ? ' table-order="' . $tableOrder . '"' : '') . '>';
 				$this->resprints .= '<a href="' . $url_param . '">';
 				$this->resprints .= $langs->trans('LicenseNote');
 				$this->resprints .= '</a>';
@@ -660,7 +674,22 @@ class ActionsLicenseManager extends CommonHookActions
 				dol_include_once('/licensemanager/class/licenseorder.class.php');
 				$langs->load('licensemanager@licensemanager');
 				$obj = $parameters['obj'];
-				$this->resprints .= '<td class="right">' . $obj->identification . '</td>';
+				$product_ids = explode(",", $obj->product_ids);
+				$tooltip = '';
+				if (!empty($product_ids) && is_array($product_ids)) {
+					// Check that product in license is in the order
+					foreach ($product_ids as $pid) {
+						if (!empty($pid) && $pid > 0) {
+							$product = new Product($this->db);
+							$product->fetch($pid);
+							if (!empty($product->id)) {
+								$tooltip .= $product->label . ' ';
+							}
+						}
+
+					}
+				}
+				$this->resprints .= '<td class="right" title="'.dolPrintHTMLForAttribute($tooltip).'" >' . $obj->identification . '</td>';
 				$this->resprints .= '<td class="right">';
 				if (!empty($obj->license_date_valid)) {
 					$date_valid = $this->db->jdate($obj->license_date_valid);
