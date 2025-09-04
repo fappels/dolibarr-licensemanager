@@ -467,6 +467,7 @@ class Licenseorder extends CommonObject
 					if ($licenseKeylist->type == 0) {
 						if ($licenseOrderDet->update($user) > 0) {
 							$this->status = self::STATUS_VALIDATED;
+							$this->date_valid = $licenseOrderDet->datev;
 							$this->update($user);
 							return $licenseOrderDet->license_key;
 						}
@@ -476,6 +477,7 @@ class Licenseorder extends CommonObject
 							$licenseOrderDet->license_key = $licenseList->external_key;
 							if ($licenseOrderDet->update($user) > 0) {
 								$this->status = self::STATUS_VALIDATED;
+								$this->date_valid = $licenseOrderDet->datev;
 								$this->update($user);
 								return $licenseOrderDet->license_key;
 							}
