@@ -230,12 +230,16 @@ if (strstr($action, 'set')) {
 		}
 	}
 }
-if ($action == 'generate_doc' || $canceled) {
+if ($action == 'generate_doc' || $action == 'renew_licenses' || $canceled) {
 	// generate document
+	// Set output language
+	$outputlangs = new Translate('', $conf);
+	$order->fetch_thirdparty();
+	$outputlangs->setDefaultLang(empty($order->thirdparty->default_lang) ? $mysoc->default_lang : $order->thirdparty->default_lang);
 	$licenseOrderList = new Licenseorder($db);
 	if ($licenseOrderList->fetchList("fk_commande = $order->id", '') > 0) {
 		$pdfLicense = new pdf_license($db);
-		if ($pdfLicense->write_file($order, $langs) > 0) {
+		if ($pdfLicense->write_file($order, $outputlangs) > 0) {
 			$mesg = '<font class="ok">' . $langs->trans("Generated") . '</font>';
 		} else {
 			$mesg = '<font class="error">' . $langs->trans("Error") . ' ' . $action . '</font>';

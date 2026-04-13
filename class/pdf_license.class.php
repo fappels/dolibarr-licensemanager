@@ -122,7 +122,7 @@ class pdf_license extends CommonDocGenerator
 		{
 			$order->fetch_thirdparty();
 
-			$langs->transnoentities("key") ? $fileIndication = "_" . $langs->transnoentities("key") :  $fileIndication = "_Key";
+			$outputlangs->transnoentities("key") ? $fileIndication = "_" . $outputlangs->transnoentities("key") :  $fileIndication = "_Key";
 
 			$file = $dir . "/" . $objectref . $fileIndication . ".pdf";
 
@@ -253,7 +253,7 @@ class pdf_license extends CommonDocGenerator
 
 				$pdf->Close();
 
-				$pdf->Output($file,'FD');
+				$pdf->Output($file,'F');
 				if (! empty($conf->global->MAIN_UMASK))
 					@chmod($file, octdec($conf->global->MAIN_UMASK));
 
@@ -416,7 +416,7 @@ class pdf_license extends CommonDocGenerator
 		        $usertmp=new User($this->db);
 		        $usertmp->fetch($arrayidcontact[0]);
 		        $pdf->SetTextColor(0,0,60);
-		        $pdf->MultiCell(190, 3, $langs->trans("SalesRepresentative")." : ".$usertmp->getFullName($langs), '', 'R');
+		        $pdf->MultiCell(190, 3, $outputlangs->trans("SalesRepresentative")." : ".$usertmp->getFullName($outputlangs), '', 'R');
 		    }
 		}
 
