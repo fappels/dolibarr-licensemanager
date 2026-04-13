@@ -271,6 +271,14 @@ class ActionsLicenseManager extends CommonHookActions
 				$this->results = array('linetotalremise' => 0);
 				return 1;
 			}
+			if ($object->element == 'commande' && getDolGlobalInt('LICENSEMANAGER_DISABLE_DISCOUNT_ON_ORDER', 0)) {
+				$this->results = array('linetotalremise' => 0);
+				return 1;
+			}
+			if ($object->element == 'facture' && getDolGlobalInt('LICENSEMANAGER_DISABLE_DISCOUNT_ON_INVOICE', 0)) {
+				$this->results = array('linetotalremise' => 0);
+				return 1;
+			}
 		}
 
 		return 0;
@@ -532,7 +540,9 @@ class ActionsLicenseManager extends CommonHookActions
 				);
 				$this->resprints .= $form->selectarray('search_license_status', $liststatus, $search_status, 1, 0, 0, '', 0, 0, 0, '', 'search_status width100 onrightofpage');
 				$this->resprints .= '</td>';
-				$this->resprints .= '<td></td>';
+				if (in_array($parameters['currentcontext'], array('webportalpage'))) {
+					$this->resprints .= '<td></td>';
+				}
 			}
 		}
 
@@ -570,7 +580,9 @@ class ActionsLicenseManager extends CommonHookActions
 				$this->resprints .= getTitleFieldOfList($langs->trans('DateValid'), 0, $_SERVER["PHP_SELF"], 'license_date_valid', '', $param, '', $sortfield, $sortorder, 'right ');
 				$this->resprints .= getTitleFieldOfList($langs->trans('LicenseNote'), 0, $_SERVER["PHP_SELF"], 'license_note', '', $param, '', $sortfield, $sortorder, 'right ');
 				$this->resprints .= getTitleFieldOfList($langs->trans('LicenseStatus'), 0, $_SERVER["PHP_SELF"], 'license_status', '', $param, '', $sortfield, $sortorder, 'right ');
-				$this->resprints .= getTitleFieldOfList($langs->trans('LicenseDoc'));
+				if (in_array($parameters['currentcontext'], array('webportalpage'))) {
+					$this->resprints .= getTitleFieldOfList($langs->trans('LicenseDoc'));
+				}
 			}
 		}
 
