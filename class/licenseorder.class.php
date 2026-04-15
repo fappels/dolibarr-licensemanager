@@ -559,6 +559,12 @@ class Licenseorder extends CommonObject
 				if ($orderRef != $order->ref) {
 					// print button to cancel other license
 					print '<td align="center">'.dolGetButtonAction('', $langs->trans('CancelLicense', $orderRef), 'danger', $_SERVER["PHP_SELF"] . '?licenseid=' . $this->id . '&amp;id='.  $order->id .'&amp;action=cancel_license&token='.newToken(), '', $buttonEnabled).'</td>';
+				} elseif (empty($data['fk_commande_det']) && $order->status == Commande::STATUS_DRAFT) {
+					// print button to delete license order line for old data which has no link with order line and is canceled
+					print '<td align="center">'.dolGetButtonAction('', $langs->trans('Delete'), 'danger', $_SERVER["PHP_SELF"] . '?licenselineid=' . $data['rowid'] . '&amp;id='.  $order->id .'&amp;action=delete_license_order_line&token='.newToken()).'</td>';
+
+				} else {
+					print '<td align="center"></td>';
 				}
 			}
 		}

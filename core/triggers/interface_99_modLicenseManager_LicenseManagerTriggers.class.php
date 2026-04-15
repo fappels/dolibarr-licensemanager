@@ -241,6 +241,8 @@ class InterfaceLicenseManagerTriggers extends DolibarrTriggers
 						$licenseOrderDet = new Licenseorderdet($this->db);
 						$licenseOrderDet->id = $data['rowid'];
 						if ($licenseOrderDet->delete($user) > 0) {
+							$mesg = '<font class="ok">' . $langs->trans("LicenseOrderLineDeleted") . '</font>';
+							setEventMessage($mesg, 'mesgs');
 							dol_syslog("Trigger '" . $this->name . "' for action '$action' for licenseorder detail" . __FILE__ . ". id=" . $licenseOrderDet->id);
 						}
 					}

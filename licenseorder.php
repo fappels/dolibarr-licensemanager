@@ -229,6 +229,19 @@ if (strstr($action, 'set')) {
 			$mesg = '<font class="error">' . $langs->trans('Error') . ' ' . $langs->trans('AlreadyCanceled') . '</font>';
 		}
 	}
+} elseif ($action == 'delete_license_order_line' && GETPOST('licenselineid', 'int') > 0) {
+	// delete license order line for old data which has no link with order line and is canceled
+	$licenseOrderLine = new Licenseorderdet($db);
+
+	if ($licenseOrderLine->fetch(GETPOST('licenselineid', 'int')) > 0) {
+		$result = $licenseOrderLine->delete($user);
+
+		if ($result > 0) {
+			$mesg = '<font class="ok">' . $langs->trans("LicenseOrderLineDeleted") . '</font>';
+		} else {
+			$mesg = '<font class="error">' . $langs->trans('Error') . ' ' . $langs->trans('AlreadyDeleted') . '</font>';
+		}
+	}
 }
 if ($action == 'generate_doc' || $action == 'renew_licenses' || $canceled) {
 	// generate document

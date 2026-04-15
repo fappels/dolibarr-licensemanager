@@ -69,3 +69,4 @@ AlreadyCanceled = déjà annulé
 LicenseExpired = Expiré à
 DownloadModule = Télécharger le module
 DownloadModuleInstructions = Téléchargez le fichier zip et installez-le dans Dolibarr configuration->modules
+LicenseOrderLineDeleted = Ligne Licence Supprimer.
